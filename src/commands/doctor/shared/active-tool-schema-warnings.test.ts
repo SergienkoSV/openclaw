@@ -57,29 +57,29 @@ describe("active tool schema doctor warnings", () => {
   it("warns with plugin ownership for active tools blocked by runtime projection", () => {
     toolState.tools = [
       tool("message", { type: "object", properties: {} }),
-      tool("dofbot_move_angles", { type: "array", items: { type: "number" } }),
+      tool("fuzz_move_angles", { type: "array", items: { type: "number" } }),
     ];
-    toolState.pluginIds = { dofbot_move_angles: "dofbot" };
+    toolState.pluginIds = { fuzz_move_angles: "fuzzplugin" };
 
     expect(
       collectActiveToolSchemaProjectionWarnings({
         cfg: {
           plugins: {
             entries: {
-              dofbot: { enabled: true },
+              fuzzplugin: { enabled: true },
             },
           },
         },
         env: { HOME: "/tmp/openclaw-test" },
       }),
     ).toEqual([
-      '- agents.main: active tool "dofbot_move_angles" from plugin "dofbot" has unsupported runtime input schema (dofbot_move_angles.parameters.type must be "object"). OpenClaw will quarantine this tool at runtime; fix or disable the plugin, or remove the tool from active allowlists.',
+      '- agents.main: active tool "fuzz_move_angles" from plugin "fuzzplugin" has unsupported runtime input schema (fuzz_move_angles.parameters.type must be "object"). OpenClaw will quarantine this tool at runtime; fix or disable the plugin, or remove the tool from active allowlists.',
     ]);
   });
 
   it("does not validate disabled plugin mode", () => {
-    toolState.tools = [tool("dofbot_move_angles", { type: "array", items: { type: "number" } })];
-    toolState.pluginIds = { dofbot_move_angles: "dofbot" };
+    toolState.tools = [tool("fuzz_move_angles", { type: "array", items: { type: "number" } })];
+    toolState.pluginIds = { fuzz_move_angles: "fuzzplugin" };
 
     expect(
       collectActiveToolSchemaProjectionWarnings({
@@ -93,13 +93,13 @@ describe("active tool schema doctor warnings", () => {
 
   it("validates provider-normalized runtime schemas before reporting doctor health", () => {
     const healthyTool = tool("message", { type: "object", properties: {} });
-    const dynamicTool = tool("dofbot_move_angles", { type: "object", properties: {} });
+    const dynamicTool = tool("fuzz_move_angles", { type: "object", properties: {} });
     toolState.tools = [healthyTool, dynamicTool];
-    toolState.pluginIds = { dofbot_move_angles: "dofbot" };
+    toolState.pluginIds = { fuzz_move_angles: "fuzzplugin" };
     toolState.normalizeTools.mockImplementation(({ tools }) =>
       tools.map((entry) =>
-        entry.name === "dofbot_move_angles"
-          ? tool("dofbot_move_angles", {
+        entry.name === "fuzz_move_angles"
+          ? tool("fuzz_move_angles", {
               type: "object",
               properties: {
                 target: { $dynamicRef: "#target" },
@@ -114,14 +114,14 @@ describe("active tool schema doctor warnings", () => {
         cfg: {
           plugins: {
             entries: {
-              dofbot: { enabled: true },
+              fuzzplugin: { enabled: true },
             },
           },
         },
         env: { HOME: "/tmp/openclaw-test" },
       }),
     ).toEqual([
-      '- agents.main: active tool "dofbot_move_angles" from plugin "dofbot" has unsupported runtime input schema (dofbot_move_angles.parameters.properties.target.$dynamicRef). OpenClaw will quarantine this tool at runtime; fix or disable the plugin, or remove the tool from active allowlists.',
+      '- agents.main: active tool "fuzz_move_angles" from plugin "fuzzplugin" has unsupported runtime input schema (fuzz_move_angles.parameters.properties.target.$dynamicRef). OpenClaw will quarantine this tool at runtime; fix or disable the plugin, or remove the tool from active allowlists.',
     ]);
   });
 
@@ -146,7 +146,7 @@ describe("active tool schema doctor warnings", () => {
 
     expect(
       collectActiveToolSchemaProjectionWarnings({
-        cfg: { plugins: { entries: { dofbot: { enabled: true } } } },
+        cfg: { plugins: { entries: { fuzzplugin: { enabled: true } } } },
         env: { HOME: "/tmp/openclaw-test" },
       }),
     ).toEqual([
