@@ -2,6 +2,10 @@ import type { AgentMessage } from "@earendil-works/pi-agent-core";
 import type { AgentSessionEvent } from "@earendil-works/pi-coding-agent";
 import type { HeartbeatToolResponse } from "../auto-reply/heartbeat-tool-response.js";
 import type { ReplyDirectiveParseResult } from "../auto-reply/reply/reply-directives.js";
+import type {
+  PendingStructuredDelivery,
+  StructuredDeliveryCaptureFailure,
+} from "../auto-reply/structured-delivery/types.js";
 import type { ReasoningLevel } from "../auto-reply/thinking.js";
 import type { InlineCodeState } from "../markdown/code-spans.js";
 import type { HookRunner } from "../plugins/hooks.js";
@@ -112,6 +116,8 @@ export type EmbeddedPiSubscribeState = {
   >;
   deterministicApprovalPromptPending: boolean;
   deterministicApprovalPromptSent: boolean;
+  pendingStructuredDelivery?: PendingStructuredDelivery;
+  structuredDeliveryCaptureFailure?: StructuredDeliveryCaptureFailure;
   lastAssistant?: AgentMessage;
 };
 
@@ -193,6 +199,7 @@ type ToolHandlerParams = Pick<
   | "sessionKey"
   | "sessionId"
   | "agentId"
+  | "config"
   | "toolResultFormat"
   | "toolProgressDetail"
 >;
@@ -223,6 +230,8 @@ type ToolHandlerState = Pick<
   | "successfulCronAdds"
   | "deterministicApprovalPromptSent"
   | "toolExecutionSinceLastBlockReply"
+  | "pendingStructuredDelivery"
+  | "structuredDeliveryCaptureFailure"
 >;
 
 export type ToolHandlerContext = {

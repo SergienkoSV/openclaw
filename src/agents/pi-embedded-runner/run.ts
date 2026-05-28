@@ -280,6 +280,7 @@ function hasCompletedModelProgressForIdleBreaker(attempt: EmbeddedRunAttemptForR
     attempt.toolMetas.length > 0 ||
     (attempt.clientToolCalls?.length ?? 0) > 0 ||
     hasMessagingToolDeliveryEvidence(attempt) ||
+    attempt.didSendStructuredInteractionTool === true ||
     attempt.itemLifecycle.completedCount > 0
   );
 }
@@ -1653,6 +1654,7 @@ export async function runEmbeddedPiAgent(
               : undefined;
           const canRestartForLiveSwitch =
             !hasMessagingToolDeliveryEvidence(attempt) &&
+            !attempt.didSendStructuredInteractionTool &&
             !attempt.didSendDeterministicApprovalPrompt &&
             !attempt.lastToolError &&
             (attempt.toolMetas?.length ?? 0) === 0 &&
@@ -2611,32 +2613,42 @@ export async function runEmbeddedPiAgent(
           const finalAssistantVisibleText = resolveFinalAssistantVisibleText(sessionLastAssistant);
           const finalAssistantRawText = resolveFinalAssistantRawText(sessionLastAssistant);
 
-          const payloads = buildEmbeddedRunPayloads({
-            assistantTexts: attempt.assistantTexts,
-            toolMetas: attempt.toolMetas,
-            lastAssistant: attempt.lastAssistant,
-            currentAssistant: currentAttemptAssistant ?? null,
-            lastToolError: attempt.lastToolError,
-            config: params.config,
-            isCronTrigger: params.trigger === "cron",
-            sessionKey: params.sessionKey ?? params.sessionId,
-            provider: activeErrorContext.provider,
-            model: activeErrorContext.model,
-            verboseLevel: params.verboseLevel,
-            reasoningLevel: params.reasoningLevel,
-            thinkingLevel: params.thinkLevel,
-            toolResultFormat: resolvedToolResultFormat,
-            suppressToolErrorWarnings: params.suppressToolErrorWarnings,
-            inlineToolResultsAllowed: false,
-            didSendViaMessagingTool: attempt.didSendViaMessagingTool,
-            messagingToolSourceReplyPayloads: attempt.messagingToolSourceReplyPayloads,
-            sourceReplyDeliveryMode: params.sourceReplyDeliveryMode,
-            agentId: params.agentId,
-            runId: params.runId,
-            runAborted: aborted,
-            didSendDeterministicApprovalPrompt: attempt.didSendDeterministicApprovalPrompt,
-            heartbeatToolResponse: attempt.heartbeatToolResponse,
-          });
+          const payloads =
+            attempt.structuredDelivery?.delivered || attempt.didSendStructuredInteractionTool
+              ? [{ text: SILENT_REPLY_TOKEN }]
+              : attempt.structuredDelivery?.failure
+                ? [
+                    {
+                      text: "Could not prepare the structured delivery payload. Please try again.",
+                      isError: true,
+                    },
+                  ]
+                : buildEmbeddedRunPayloads({
+                    assistantTexts: attempt.assistantTexts,
+                    toolMetas: attempt.toolMetas,
+                    lastAssistant: attempt.lastAssistant,
+                    currentAssistant: currentAttemptAssistant ?? null,
+                    lastToolError: attempt.lastToolError,
+                    config: params.config,
+                    isCronTrigger: params.trigger === "cron",
+                    sessionKey: params.sessionKey ?? params.sessionId,
+                    provider: activeErrorContext.provider,
+                    model: activeErrorContext.model,
+                    verboseLevel: params.verboseLevel,
+                    reasoningLevel: params.reasoningLevel,
+                    thinkingLevel: params.thinkLevel,
+                    toolResultFormat: resolvedToolResultFormat,
+                    suppressToolErrorWarnings: params.suppressToolErrorWarnings,
+                    inlineToolResultsAllowed: false,
+                    didSendViaMessagingTool: attempt.didSendViaMessagingTool,
+                    messagingToolSourceReplyPayloads: attempt.messagingToolSourceReplyPayloads,
+                    sourceReplyDeliveryMode: params.sourceReplyDeliveryMode,
+                    agentId: params.agentId,
+                    runId: params.runId,
+                    runAborted: aborted,
+                    didSendDeterministicApprovalPrompt: attempt.didSendDeterministicApprovalPrompt,
+                    heartbeatToolResponse: attempt.heartbeatToolResponse,
+                  });
           const payloadsWithToolMedia = mergeAttemptToolMediaPayloads({
             payloads,
             toolMediaUrls: attempt.toolMediaUrls,
@@ -2652,6 +2664,7 @@ export async function runEmbeddedPiAgent(
             !attempt.clientToolCalls &&
             !attempt.yieldDetected &&
             !attempt.didSendViaMessagingTool &&
+            !attempt.didSendStructuredInteractionTool &&
             !attempt.didSendDeterministicApprovalPrompt &&
             !attempt.lastToolError &&
             (attempt.toolMetas?.length ?? 0) === 0;
@@ -2663,11 +2676,14 @@ export async function runEmbeddedPiAgent(
             trigger: params.trigger,
             lastToolError: attempt.lastToolError,
           });
-
           // Timeout aborts can leave the run without payloads or with only a
           // partial assistant fragment. Emit an explicit timeout error instead,
           // preserving any tool payloads that succeeded before the timeout.
-          if (timedOutDuringPrompt && !hasMessagingToolDeliveryEvidence(attempt)) {
+          if (
+            timedOutDuringPrompt &&
+            !hasMessagingToolDeliveryEvidence(attempt) &&
+            !attempt.didSendStructuredInteractionTool
+          ) {
             const timeoutText = idleTimedOut
               ? "The model did not produce a response before the model idle timeout. " +
                 "Please try again, or increase `models.providers.<id>.timeoutSeconds` for slow local or self-hosted providers. " +

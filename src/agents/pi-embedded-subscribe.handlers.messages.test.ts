@@ -684,6 +684,42 @@ describe("handleMessageEnd", () => {
     expect(warn).not.toHaveBeenCalled();
   });
 
+  it("suppresses raw structured delivery JSON while keeping it available for validation", () => {
+    const onAgentEvent = vi.fn();
+    const emitBlockReply = vi.fn();
+    const finalizeAssistantTexts = vi.fn();
+    const ctx = createMessageEndContext({
+      onAgentEvent,
+      finalizeAssistantTexts,
+      emitBlockReply,
+      state: {
+        pendingStructuredDelivery: {
+          contractId: "app_result",
+          trigger: { toolName: "demo__build_app_result", toolCallId: "tool-1" },
+          trusted: { url: "https://example.test/app" },
+          retry: { attempts: 0, maxAttempts: 1 },
+        },
+      },
+    });
+
+    void handleMessageEnd(ctx, {
+      type: "message_end",
+      message: {
+        role: "assistant",
+        content: JSON.stringify({ message: "Ready.", primaryActionLabel: "Open" }),
+        usage: { input: 1, output: 1, total: 2 },
+      },
+    } as never);
+
+    expect(onAgentEvent).not.toHaveBeenCalled();
+    expect(emitBlockReply).not.toHaveBeenCalled();
+    expect(finalizeAssistantTexts).toHaveBeenCalledWith(
+      expect.objectContaining({
+        text: JSON.stringify({ message: "Ready.", primaryActionLabel: "Open" }),
+      }),
+    );
+  });
+
   it("suppresses commentary-phase replies from user-visible output", () => {
     const onAgentEvent = vi.fn();
     const emitBlockReply = vi.fn();

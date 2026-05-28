@@ -462,6 +462,8 @@ export function createOpenClawCodingTools(options?: {
   authProfileStore?: AuthProfileStore;
   /** Callback invoked when sessions_yield tool is called. */
   onYield?: (message: string) => Promise<void> | void;
+  /** Called when a structured interaction tool delivers user-visible UI itself. */
+  onStructuredInteractionDelivered?: () => void;
   /** Optional instrumentation callback for tool preparation stage timing. */
   recordToolPrepStage?: (name: string) => void;
   /** Live observer called after wrapped tool outcomes are recorded. */
@@ -962,6 +964,9 @@ export function createOpenClawCodingTools(options?: {
           inheritedToolAllowlist,
           inheritedToolDenylist,
           onYield: options?.onYield,
+          onStructuredInteractionDelivered: options?.onStructuredInteractionDelivered
+            ? () => options.onStructuredInteractionDelivered?.()
+            : undefined,
           allowGatewaySubagentBinding: options?.allowGatewaySubagentBinding,
           recordToolPrepStage: options?.recordToolPrepStage,
         })

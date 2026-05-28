@@ -129,6 +129,23 @@ describe("runEmbeddedPiAgent incomplete-turn safety", () => {
     expect(result.payloads?.[0]?.text).toContain("verify before retrying");
   });
 
+  it("suppresses final payload after a structured interaction tool delivered UI", async () => {
+    mockedClassifyFailoverReason.mockReturnValue(null);
+    mockedRunEmbeddedAttempt.mockResolvedValueOnce(
+      makeAttemptResult({
+        assistantTexts: ["The location request button has been sent."],
+        didSendStructuredInteractionTool: true,
+      }),
+    );
+
+    const result = await runEmbeddedPiAgent({
+      ...overflowBaseRunParams,
+      runId: "run-location-request-suppression",
+    });
+
+    expect(result.payloads).toEqual([{ text: "NO_REPLY" }]);
+  });
+
   it("synthesizes a silent cron payload from a trailing current-attempt NO_REPLY tool result", () => {
     const payload = resolveSilentToolResultReplyPayload({
       isCronTrigger: true,
@@ -2395,7 +2412,7 @@ describe("resolvePlanningOnlyRetryInstruction single-action loophole", () => {
       prompt: "Please inspect the code, make the change, and run the checks.",
       aborted: false,
       timedOut: false,
-      attempt: makeAttemptWithTools(["vendor_widget"], "I'll continue from there next."),
+      attempt: makeAttemptWithTools(["vendor_tool"], "I'll continue from there next."),
     });
 
     expect(result).toBeNull();

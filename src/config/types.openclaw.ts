@@ -26,6 +26,7 @@ import type { NodeHostConfig } from "./types.node-host.js";
 import type { PluginsConfig } from "./types.plugins.js";
 import type { SecretsConfig } from "./types.secrets.js";
 import type { SkillsConfig } from "./types.skills.js";
+import type { StructuredDeliveryConfig } from "./types.structured-delivery.js";
 import type { ToolsConfig } from "./types.tools.js";
 import type { ProxyConfig } from "./zod-schema.proxy.js";
 
@@ -120,6 +121,7 @@ export type OpenClawConfig = {
   };
   secrets?: SecretsConfig;
   skills?: SkillsConfig;
+  structuredDelivery?: StructuredDeliveryConfig;
   plugins?: PluginsConfig;
   surfaces?: Record<string, SurfaceConfigEntry>;
   models?: ModelsConfig;

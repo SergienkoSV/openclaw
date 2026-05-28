@@ -62,6 +62,7 @@ type BuildTrajectoryArtifactsParams = {
   };
   toolMetas: Array<{ toolName: string; meta?: string }>;
   didSendViaMessagingTool: boolean;
+  didSendStructuredInteractionTool?: boolean;
   successfulCronAdds: number;
   messagingToolSentTexts: string[];
   messagingToolSentMediaUrls: string[];
@@ -317,6 +318,7 @@ export function buildTrajectoryArtifacts(
     itemLifecycle: params.itemLifecycle,
     toolMetas: params.toolMetas,
     didSendViaMessagingTool: params.didSendViaMessagingTool,
+    didSendStructuredInteractionTool: params.didSendStructuredInteractionTool,
     successfulCronAdds: params.successfulCronAdds,
     messagingToolSentTexts: params.messagingToolSentTexts,
     messagingToolSentMediaUrls: params.messagingToolSentMediaUrls,

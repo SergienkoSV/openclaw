@@ -393,6 +393,7 @@ import {
   queueRuntimeContextForNextTurn,
   resolveRuntimeContextPromptParts,
 } from "./runtime-context-prompt.js";
+import { runStructuredDeliveryValidation } from "./structured-delivery.js";
 import type { EmbeddedRunAttemptParams, EmbeddedRunAttemptResult } from "./types.js";
 
 export {
@@ -1356,6 +1357,7 @@ export async function runEmbeddedAttempt(
         ? createToolSearchCatalogRef()
         : undefined;
     const toolSearchTargetTranscriptProjections: ToolSearchTargetTranscriptProjection[] = [];
+    const structuredInteractionDeliveredRef = { value: false };
     const toolsRaw = !shouldConstructTools
       ? []
       : (() => {
@@ -1394,6 +1396,9 @@ export async function runEmbeddedAttempt(
             sessionId: params.sessionId,
             runId: params.runId,
             toolSearchCatalogRef,
+            onStructuredInteractionDelivered: () => {
+              structuredInteractionDeliveredRef.value = true;
+            },
             agentDir,
             workspaceDir: effectiveWorkspace,
             // When sandboxing uses a copied workspace (`ro` or `none`), effectiveWorkspace points
@@ -3184,6 +3189,8 @@ export async function runEmbeddedAttempt(
         getVisibleBlockReplyCount,
         getSuccessfulCronAdds,
         getReplayState,
+        getPendingStructuredDelivery,
+        getStructuredDeliveryCaptureFailure,
         didSendViaMessagingTool,
         didSendDeterministicApprovalPrompt,
         getLastToolError,
@@ -3262,6 +3269,7 @@ export async function runEmbeddedAttempt(
       let lastCallUsage: NormalizedUsage | undefined;
       let compactionOccurredThisAttempt = false;
       let finalPromptText: string | undefined;
+      let structuredDelivery: EmbeddedRunAttemptResult["structuredDelivery"];
       if (params.replyOperation) {
         params.replyOperation.attachBackend(queueHandle);
       }
@@ -4169,6 +4177,46 @@ export async function runEmbeddedAttempt(
           }
         }
 
+        const waitForStructuredDeliveryRepromptCompaction = async () => {
+          const waitResult = await waitForCompactionRetryWithAggregateTimeout({
+            waitForCompactionRetry,
+            abortable,
+            aggregateTimeoutMs: COMPACTION_RETRY_AGGREGATE_TIMEOUT_MS,
+            isCompactionStillInFlight: isCompactionInFlight,
+          });
+          if (waitResult.timedOut) {
+            timedOutDuringCompaction = true;
+            if (!isProbeSession) {
+              log.warn(
+                `structured delivery validation reprompt compaction timeout (${COMPACTION_RETRY_AGGREGATE_TIMEOUT_MS}ms): ` +
+                  `runId=${params.runId} sessionId=${params.sessionId}`,
+              );
+            }
+          }
+        };
+
+        const promptForStructuredDeliveryCopy = async (prompt: string) => {
+          await abortable(activeSession.prompt(prompt));
+          if (params.onBlockReplyFlush) {
+            await params.onBlockReplyFlush();
+          }
+          await waitForStructuredDeliveryRepromptCompaction();
+        };
+
+        if (!promptError && !aborted && !yieldAborted) {
+          structuredDelivery = await runStructuredDeliveryValidation({
+            pending: getPendingStructuredDelivery(),
+            captureFailure: getStructuredDeliveryCaptureFailure(),
+            assistantTexts,
+            promptModel: promptForStructuredDeliveryCopy,
+            log,
+            runId: params.runId,
+            sessionId: params.sessionId,
+            shouldContinue: () =>
+              !promptError && !aborted && !yieldAborted && !timedOutDuringCompaction,
+          });
+        }
+
         await sessionLockController.waitForSessionEvents(activeSession);
         await sessionLockController.withSessionWriteLock(async () => {
           // Check if ANY compaction occurred during the entire attempt (prompt + retry).
@@ -4551,6 +4599,7 @@ export async function runEmbeddedAttempt(
       const observedReplayMetadata = buildAttemptReplayMetadata({
         toolMetas: toolMetasNormalized,
         didSendViaMessagingTool: didSendViaMessagingTool(),
+        didSendStructuredInteractionTool: structuredInteractionDeliveredRef.value,
         messagingToolSentTexts: getMessagingToolSentTexts(),
         messagingToolSentMediaUrls: getMessagingToolSentMediaUrls(),
         successfulCronAdds: getSuccessfulCronAdds(),
@@ -4608,6 +4657,7 @@ export async function runEmbeddedAttempt(
           yieldDetected,
           didSendDeterministicApprovalPrompt: didSendDeterministicApprovalPromptNow,
           didSendViaMessagingTool: didSendViaMessagingTool(),
+          didSendStructuredInteractionTool: structuredInteractionDeliveredRef.value,
           messagingToolSentTexts: getMessagingToolSentTexts(),
           messagingToolSentMediaUrls: getMessagingToolSentMediaUrls(),
           messagingToolSentTargets: getMessagingToolSentTargets(),
@@ -4682,6 +4732,7 @@ export async function runEmbeddedAttempt(
           itemLifecycle: getItemLifecycle(),
           toolMetas: toolMetasNormalized,
           didSendViaMessagingTool: didSendViaMessagingTool(),
+          didSendStructuredInteractionTool: structuredInteractionDeliveredRef.value,
           successfulCronAdds: getSuccessfulCronAdds(),
           messagingToolSentTexts: getMessagingToolSentTexts(),
           messagingToolSentMediaUrls: getMessagingToolSentMediaUrls(),
@@ -4730,6 +4781,7 @@ export async function runEmbeddedAttempt(
         lastToolError,
         didSendViaMessagingTool: didSendViaMessagingTool(),
         didSendDeterministicApprovalPrompt: didSendDeterministicApprovalPromptNow,
+        didSendStructuredInteractionTool: structuredInteractionDeliveredRef.value,
         messagingToolSentTexts: getMessagingToolSentTexts(),
         messagingToolSentMediaUrls: getMessagingToolSentMediaUrls(),
         messagingToolSentTargets: getMessagingToolSentTargets(),
@@ -4738,6 +4790,7 @@ export async function runEmbeddedAttempt(
         toolAudioAsVoice: pendingToolMediaReply?.audioAsVoice,
         toolTrustedLocalMedia: pendingToolMediaReply?.trustedLocalMedia,
         successfulCronAdds: getSuccessfulCronAdds(),
+        structuredDelivery,
         cloudCodeAssistFormatError: Boolean(
           lastAssistant?.errorMessage && isCloudCodeAssistFormatError(lastAssistant.errorMessage),
         ),

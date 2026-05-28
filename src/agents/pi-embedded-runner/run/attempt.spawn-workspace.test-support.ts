@@ -107,6 +107,8 @@ export function createSubscriptionMock(): SubscriptionMock {
     getPendingToolMediaReply: () => null,
     getVisibleBlockReplyCount: () => 0,
     getSuccessfulCronAdds: () => 0,
+    getPendingStructuredDelivery: () => undefined,
+    getStructuredDeliveryCaptureFailure: () => undefined,
     getReplayState: () => ({
       replayInvalid: false,
       hadPotentialSideEffects: false,

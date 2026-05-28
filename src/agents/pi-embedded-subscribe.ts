@@ -191,6 +191,8 @@ export function subscribeEmbeddedPiSession(params: SubscribeEmbeddedPiSessionPar
     pendingAssistantReplyDirectives: undefined,
     deterministicApprovalPromptPending: false,
     deterministicApprovalPromptSent: false,
+    pendingStructuredDelivery: undefined,
+    structuredDeliveryCaptureFailure: undefined,
   };
   const usageTotals = {
     input: 0,
@@ -962,6 +964,8 @@ export function subscribeEmbeddedPiSession(params: SubscribeEmbeddedPiSessionPar
     state.toolExecutionSinceLastBlockReply = false;
     state.replayState = mergeEmbeddedRunReplayState(state.replayState, params.initialReplayState);
     state.livenessState = "working";
+    state.pendingStructuredDelivery = undefined;
+    state.structuredDeliveryCaptureFailure = undefined;
     resetAssistantMessageState(0);
   };
 
@@ -1115,6 +1119,12 @@ export function subscribeEmbeddedPiSession(params: SubscribeEmbeddedPiSessionPar
     getVisibleBlockReplyCount: () => state.visibleBlockReplyCount,
     getSuccessfulCronAdds: () => state.successfulCronAdds,
     getReplayState: () => ({ ...state.replayState }),
+    getPendingStructuredDelivery: () =>
+      state.pendingStructuredDelivery ? { ...state.pendingStructuredDelivery } : undefined,
+    getStructuredDeliveryCaptureFailure: () =>
+      state.structuredDeliveryCaptureFailure
+        ? { ...state.structuredDeliveryCaptureFailure }
+        : undefined,
     // Returns true if any messaging tool successfully sent a message.
     // Used to suppress agent's confirmation text (e.g., "Respondi no Telegram!")
     // which is generated AFTER the tool sends the actual answer.

@@ -35,6 +35,7 @@ export function makeAttemptResult(
 ): EmbeddedRunAttemptResult {
   const toolMetas = overrides.toolMetas ?? [];
   const didSendViaMessagingTool = overrides.didSendViaMessagingTool ?? false;
+  const didSendStructuredInteractionTool = overrides.didSendStructuredInteractionTool ?? false;
   const messagingToolSentTexts = overrides.messagingToolSentTexts ?? [];
   const messagingToolSentMediaUrls = overrides.messagingToolSentMediaUrls ?? [];
   const messagingToolSentTargets = overrides.messagingToolSentTargets ?? [];
@@ -58,6 +59,7 @@ export function makeAttemptResult(
       buildAttemptReplayMetadata({
         toolMetas,
         didSendViaMessagingTool,
+        didSendStructuredInteractionTool,
         messagingToolSentTexts,
         messagingToolSentMediaUrls,
         messagingToolSentTargets,
@@ -69,6 +71,7 @@ export function makeAttemptResult(
       activeCount: 0,
     },
     didSendViaMessagingTool,
+    didSendStructuredInteractionTool,
     messagingToolSentTexts,
     messagingToolSentMediaUrls,
     messagingToolSentTargets,

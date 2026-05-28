@@ -3,6 +3,7 @@ import {
   HEARTBEAT_RESPONSE_TOOL_NAME,
   normalizeHeartbeatToolResponse,
 } from "../auto-reply/heartbeat-tool-response.js";
+import { captureStructuredDeliveryFromToolResult } from "../auto-reply/structured-delivery/capture.js";
 import type {
   AgentApprovalEventData,
   AgentCommandOutputEventData,
@@ -1246,6 +1247,27 @@ export async function handleToolExecutionEnd(
   ctx.log.debug(
     `embedded run tool end: runId=${ctx.params.runId} tool=${toolName} toolCallId=${toolCallId}`,
   );
+
+  const structuredDeliveryCapture = captureStructuredDeliveryFromToolResult({
+    config: ctx.params.config,
+    toolName,
+    toolCallId,
+    result: sanitizedResult,
+    isToolError,
+  });
+  if (structuredDeliveryCapture.status === "pending") {
+    ctx.state.pendingStructuredDelivery = structuredDeliveryCapture.pending;
+    ctx.state.structuredDeliveryCaptureFailure = undefined;
+    ctx.log.debug(
+      `captured structured delivery: runId=${ctx.params.runId} tool=${toolName} toolCallId=${toolCallId}`,
+    );
+  } else if (structuredDeliveryCapture.status === "failed") {
+    ctx.state.pendingStructuredDelivery = undefined;
+    ctx.state.structuredDeliveryCaptureFailure = structuredDeliveryCapture.failure;
+    ctx.log.warn(
+      `structured delivery capture failed: runId=${ctx.params.runId} tool=${toolName} toolCallId=${toolCallId} code=${structuredDeliveryCapture.failure.code}`,
+    );
+  }
 
   await emitToolResultOutput({
     ctx,

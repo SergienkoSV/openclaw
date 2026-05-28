@@ -31,6 +31,7 @@ export * from "./types.secrets.js";
 export * from "./types.signal.js";
 export * from "./types.skills.js";
 export * from "./types.slack.js";
+export * from "./types.structured-delivery.js";
 export * from "./types.telegram.js";
 export * from "./types.tts.js";
 export * from "./types.tools.js";

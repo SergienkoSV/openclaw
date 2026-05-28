@@ -25,6 +25,7 @@ type ReplayMetadataAttempt = Pick<
   EmbeddedRunAttemptResult,
   | "toolMetas"
   | "didSendViaMessagingTool"
+  | "didSendStructuredInteractionTool"
   | "messagingToolSentTexts"
   | "messagingToolSentMediaUrls"
   | "successfulCronAdds"
@@ -39,6 +40,7 @@ type IncompleteTurnAttempt = Pick<
   | "yieldDetected"
   | "didSendDeterministicApprovalPrompt"
   | "didSendViaMessagingTool"
+  | "didSendStructuredInteractionTool"
   | "messagingToolSentTexts"
   | "messagingToolSentMediaUrls"
   | "messagingToolSentTargets"
@@ -56,6 +58,7 @@ type PlanningOnlyAttempt = Pick<
   | "yieldDetected"
   | "didSendDeterministicApprovalPrompt"
   | "didSendViaMessagingTool"
+  | "didSendStructuredInteractionTool"
   | "lastToolError"
   | "lastAssistant"
   | "itemLifecycle"
@@ -206,6 +209,7 @@ export function buildAttemptReplayMetadata(
   const hadPotentialSideEffects =
     hadMutatingTools ||
     hasMessagingToolDeliveryEvidence(params) ||
+    params.didSendStructuredInteractionTool === true ||
     (params.successfulCronAdds ?? 0) > 0;
   return {
     hadPotentialSideEffects,

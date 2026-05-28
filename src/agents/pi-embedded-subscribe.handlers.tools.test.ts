@@ -280,6 +280,103 @@ describe("handleToolExecutionEnd cron.add commitment tracking", () => {
   });
 });
 
+describe("handleToolExecutionEnd structured delivery capture", () => {
+  it("stores pending structured delivery after a configured trigger succeeds", async () => {
+    const { ctx } = createTestContext();
+    ctx.params.config = {
+      structuredDelivery: {
+        enabled: true,
+        retry: { maxAttempts: 1 },
+        triggers: [
+          {
+            tool: "demo__build_app_result",
+            contract: "app_result",
+            trustedFields: {
+              urlPath: "details.structuredContent.action_url",
+            },
+          },
+        ],
+      },
+    } as unknown as ToolHandlerContext["params"]["config"];
+
+    await handleToolExecutionEnd(
+      ctx as never,
+      {
+        type: "tool_execution_end",
+        toolName: "demo__build_app_result",
+        toolCallId: "tool-structured-1",
+        isError: false,
+        result: {
+          details: {
+            structuredContent: {
+              action_url: " https://example.test/app ",
+            },
+          },
+        },
+      } as never,
+    );
+
+    expect(ctx.state.pendingStructuredDelivery).toMatchObject({
+      contractId: "app_result",
+      trigger: {
+        toolName: "demo__build_app_result",
+        toolCallId: "tool-structured-1",
+      },
+      trusted: {
+        url: "https://example.test/app",
+      },
+      retry: {
+        attempts: 0,
+        maxAttempts: 1,
+      },
+    });
+    expect(ctx.state.structuredDeliveryCaptureFailure).toBeUndefined();
+  });
+
+  it("records capture failure when a configured trigger omits trusted URL", async () => {
+    const { ctx } = createTestContext();
+    ctx.params.config = {
+      structuredDelivery: {
+        enabled: true,
+        triggers: [
+          {
+            tool: "demo__build_app_result",
+            contract: "app_result",
+            trustedFields: {
+              urlPath: "details.structuredContent.action_url",
+            },
+          },
+        ],
+      },
+    } as unknown as ToolHandlerContext["params"]["config"];
+
+    await handleToolExecutionEnd(
+      ctx as never,
+      {
+        type: "tool_execution_end",
+        toolName: "demo__build_app_result",
+        toolCallId: "tool-structured-2",
+        isError: false,
+        result: {
+          details: {
+            structuredContent: {},
+          },
+        },
+      } as never,
+    );
+
+    expect(ctx.state.pendingStructuredDelivery).toBeUndefined();
+    expect(ctx.state.structuredDeliveryCaptureFailure).toMatchObject({
+      code: "trusted_field_missing",
+      trigger: {
+        toolName: "demo__build_app_result",
+        toolCallId: "tool-structured-2",
+      },
+      issues: [{ path: "url" }],
+    });
+  });
+});
+
 describe("handleToolExecutionEnd mutating failure recovery", () => {
   it("clears edit failure when the retry succeeds through common file path aliases", async () => {
     const { ctx } = createTestContext();

@@ -492,6 +492,11 @@ export const TOOL_DISPLAY_CONFIG: ToolDisplayConfig = {
         },
       },
     },
+    request_user_location: {
+      emoji: "📍",
+      title: "Location Request",
+      detailKeys: ["message", "buttonLabel"],
+    },
     apply_patch: {
       emoji: "🩹",
       title: "Apply Patch",

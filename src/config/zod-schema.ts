@@ -214,6 +214,100 @@ const HttpUrlSchema = z
     return protocol === "http:" || protocol === "https:";
   }, "Expected http:// or https:// URL");
 
+const StructuredDeliveryTrustedFieldSchema = z.union([
+  z.literal("url"),
+  z.literal("target"),
+  z.literal("surface"),
+  z.literal("accountId"),
+  z.literal("threadId"),
+  z.literal("items"),
+  z.literal("metadata"),
+]);
+
+const StructuredDeliveryPathSchema = z.string().trim().min(1);
+
+const StructuredDeliveryHookSchema = z
+  .object({
+    path: z.string().trim().min(1),
+    timeoutMs: z.number().int().positive().max(300_000).optional(),
+  })
+  .strict();
+
+const StructuredDeliverySchema = z
+  .object({
+    enabled: z.boolean().optional(),
+    delivery: z
+      .object({
+        hooks: z
+          .object({
+            app_result: StructuredDeliveryHookSchema.optional(),
+            location_request: StructuredDeliveryHookSchema.optional(),
+          })
+          .strict()
+          .optional(),
+      })
+      .strict()
+      .optional(),
+    retry: z
+      .object({
+        maxAttempts: z.number().int().min(0).max(5).optional(),
+      })
+      .strict()
+      .optional(),
+    triggers: z
+      .array(
+        z
+          .object({
+            tool: z.string().trim().min(1).optional(),
+            mcpServer: z.string().trim().min(1).optional(),
+            mcpTool: z.string().trim().min(1).optional(),
+            contract: z.literal("app_result"),
+            trustedFields: z
+              .object({
+                urlPath: StructuredDeliveryPathSchema.optional(),
+                targetPath: StructuredDeliveryPathSchema.optional(),
+                surfacePath: StructuredDeliveryPathSchema.optional(),
+                accountIdPath: StructuredDeliveryPathSchema.optional(),
+                threadIdPath: StructuredDeliveryPathSchema.optional(),
+                itemsPath: StructuredDeliveryPathSchema.optional(),
+                metadataPath: StructuredDeliveryPathSchema.optional(),
+              })
+              .strict()
+              .optional(),
+            requiredTrustedFields: z.array(StructuredDeliveryTrustedFieldSchema).optional(),
+          })
+          .strict()
+          .superRefine((trigger, ctx) => {
+            if (!trigger.tool && !trigger.mcpServer && !trigger.mcpTool) {
+              ctx.addIssue({
+                code: z.ZodIssueCode.custom,
+                path: ["tool"],
+                message:
+                  "structuredDelivery.triggers[] must define at least one selector: tool, mcpServer, or mcpTool.",
+              });
+            }
+          }),
+      )
+      .optional(),
+  })
+  .strict()
+  .superRefine((config, ctx) => {
+    if (config.enabled !== true) {
+      return;
+    }
+
+    for (const contract of ["app_result", "location_request"] as const) {
+      if (!config.delivery?.hooks?.[contract]?.path) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          path: ["delivery", "hooks", contract, "path"],
+          message: `structuredDelivery.delivery.hooks.${contract}.path is required when structuredDelivery.enabled is true.`,
+        });
+      }
+    }
+  })
+  .optional();
+
 const ResponsesEndpointUrlFetchShape = {
   allowUrl: z.boolean().optional(),
   urlAllowlist: z.array(z.string()).optional(),
@@ -1158,6 +1252,7 @@ export const OpenClawSchema = z
       })
       .strict()
       .optional(),
+    structuredDelivery: StructuredDeliverySchema,
     plugins: z
       .object({
         enabled: z.boolean().optional(),

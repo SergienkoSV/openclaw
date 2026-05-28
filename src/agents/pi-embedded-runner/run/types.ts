@@ -2,6 +2,10 @@ import type { AgentMessage } from "@earendil-works/pi-agent-core";
 import type { Api, AssistantMessage, Model } from "@earendil-works/pi-ai";
 import type { AuthStorage, ModelRegistry } from "@earendil-works/pi-coding-agent";
 import type { HeartbeatToolResponse } from "../../../auto-reply/heartbeat-tool-response.js";
+import type {
+  StructuredDeliveryFailureCode,
+  StructuredDeliveryValidationIssue,
+} from "../../../auto-reply/structured-delivery/types.js";
 import type { ThinkLevel } from "../../../auto-reply/thinking.js";
 import type { SessionSystemPromptReport } from "../../../config/sessions/types.js";
 import type { ContextEngine, ContextEnginePromptCacheInfo } from "../../../context-engine/types.js";
@@ -114,6 +118,7 @@ export type EmbeddedRunAttemptResult = {
   currentAttemptAssistant?: AssistantMessage | undefined;
   lastToolError?: ToolErrorSummary;
   didSendViaMessagingTool: boolean;
+  didSendStructuredInteractionTool?: boolean;
   didSendDeterministicApprovalPrompt?: boolean;
   messagingToolSentTexts: string[];
   messagingToolSentMediaUrls: string[];
@@ -124,6 +129,13 @@ export type EmbeddedRunAttemptResult = {
   toolAudioAsVoice?: boolean;
   toolTrustedLocalMedia?: boolean;
   successfulCronAdds?: number;
+  structuredDelivery?: {
+    delivered?: boolean;
+    failure?: {
+      code: StructuredDeliveryFailureCode;
+      issues: StructuredDeliveryValidationIssue[];
+    };
+  };
   cloudCodeAssistFormatError: boolean;
   attemptUsage?: NormalizedUsage;
   promptCache?: ContextEnginePromptCacheInfo;

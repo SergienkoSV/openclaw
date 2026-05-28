@@ -410,6 +410,9 @@ export function handleMessageUpdate(
     return;
   }
   const suppressDeterministicApprovalOutput = shouldSuppressDeterministicApprovalOutput(ctx.state);
+  const suppressStructuredDeliveryOutput = Boolean(
+    ctx.state.pendingStructuredDelivery || ctx.state.structuredDeliveryCaptureFailure,
+  );
 
   const assistantEvent = evt.assistantMessageEvent;
   const assistantPhase = resolveAssistantMessagePhase(msg);
@@ -442,7 +445,7 @@ export function handleMessageUpdate(
       delta: thinkingDelta,
       content: thinkingContent,
     });
-    if (ctx.state.streamReasoning) {
+    if (ctx.state.streamReasoning && !suppressStructuredDeliveryOutput) {
       // Prefer full partial-message thinking when available; fall back to event payloads.
       const partialThinking = extractAssistantThinking(msg);
       ctx.emitReasoningStream(partialThinking || thinkingContent || thinkingDelta);
@@ -516,12 +519,12 @@ export function handleMessageUpdate(
 
   if (chunk) {
     ctx.state.deltaBuffer += chunk;
-    if (!shouldUsePhaseAwareBlockReply) {
+    if (!suppressStructuredDeliveryOutput && !shouldUsePhaseAwareBlockReply) {
       appendBlockReplyChunk(ctx, chunk);
     }
   }
 
-  if (ctx.state.streamReasoning) {
+  if (ctx.state.streamReasoning && !suppressStructuredDeliveryOutput) {
     // Handle partial <think> tags: stream whatever reasoning is visible so far.
     ctx.emitReasoningStream(extractThinkingFromTaggedStream(ctx.state.deltaBuffer));
   }
@@ -579,7 +582,7 @@ export function handleMessageUpdate(
         : Boolean(deltaText || hasMedia || hasAudio);
     }
 
-    if (shouldUsePhaseAwareBlockReply) {
+    if (shouldUsePhaseAwareBlockReply && !suppressStructuredDeliveryOutput) {
       if (replace) {
         ctx.state.blockBuffer = "";
         ctx.blockChunker?.reset();
@@ -597,7 +600,11 @@ export function handleMessageUpdate(
     ctx.state.lastStreamedAssistant = next;
     ctx.state.lastStreamedAssistantCleaned = cleanedText;
 
-    if (ctx.params.silentExpected || suppressDeterministicApprovalOutput) {
+    if (
+      ctx.params.silentExpected ||
+      suppressDeterministicApprovalOutput ||
+      suppressStructuredDeliveryOutput
+    ) {
       shouldEmit = false;
     }
 
@@ -627,6 +634,7 @@ export function handleMessageUpdate(
 
   if (
     !ctx.params.silentExpected &&
+    !suppressStructuredDeliveryOutput &&
     !suppressDeterministicApprovalOutput &&
     ctx.params.onBlockReply &&
     ctx.blockChunking &&
@@ -637,6 +645,7 @@ export function handleMessageUpdate(
 
   if (
     !ctx.params.silentExpected &&
+    !suppressStructuredDeliveryOutput &&
     !suppressDeterministicApprovalOutput &&
     evtType === "text_end" &&
     ctx.state.blockReplyBreak === "text_end"
@@ -663,6 +672,9 @@ export function handleMessageEnd(
   const assistantPhase = resolveAssistantMessagePhase(assistantMessage);
   const suppressVisibleAssistantOutput = shouldSuppressAssistantVisibleOutput(assistantMessage);
   const suppressDeterministicApprovalOutput = shouldSuppressDeterministicApprovalOutput(ctx.state);
+  const suppressStructuredDeliveryOutput = Boolean(
+    ctx.state.pendingStructuredDelivery || ctx.state.structuredDeliveryCaptureFailure,
+  );
   ctx.noteLastAssistant(assistantMessage);
   ctx.recordAssistantUsage((assistantMessage as { usage?: unknown }).usage);
   ctx.commitAssistantUsage();
@@ -726,6 +738,7 @@ export function handleMessageEnd(
 
   if (
     !ctx.params.silentExpected &&
+    !suppressStructuredDeliveryOutput &&
     !suppressDeterministicApprovalOutput &&
     (cleanedText || hasMedia) &&
     (!ctx.state.emittedAssistantUpdate ||
@@ -767,6 +780,7 @@ export function handleMessageEnd(
   const onBlockReply = ctx.params.onBlockReply;
   const shouldEmitReasoning = Boolean(
     !ctx.params.silentExpected &&
+    !suppressStructuredDeliveryOutput &&
     !suppressDeterministicApprovalOutput &&
     ctx.state.includeReasoning &&
     trimmedReasoning &&
@@ -820,6 +834,7 @@ export function handleMessageEnd(
 
   if (
     !ctx.params.silentExpected &&
+    !suppressStructuredDeliveryOutput &&
     !suppressDeterministicApprovalOutput &&
     text &&
     onBlockReply &&
@@ -882,16 +897,27 @@ export function handleMessageEnd(
   if (!shouldEmitReasoningBeforeAnswer) {
     maybeEmitReasoning();
   }
-  if (!ctx.params.silentExpected && ctx.state.streamReasoning && rawThinking) {
+  if (
+    !ctx.params.silentExpected &&
+    !suppressStructuredDeliveryOutput &&
+    ctx.state.streamReasoning &&
+    rawThinking
+  ) {
     ctx.emitReasoningStream(rawThinking);
   }
 
-  if (!ctx.params.silentExpected && ctx.state.blockReplyBreak === "text_end" && onBlockReply) {
+  if (
+    !ctx.params.silentExpected &&
+    !suppressStructuredDeliveryOutput &&
+    ctx.state.blockReplyBreak === "text_end" &&
+    onBlockReply
+  ) {
     emitSplitResultAsBlockReply(ctx.consumeReplyDirectives("", { final: true }));
   }
 
   if (
     !ctx.params.silentExpected &&
+    !suppressStructuredDeliveryOutput &&
     ctx.state.blockReplyBreak === "message_end" &&
     ctx.params.onBlockReplyFlush
   ) {

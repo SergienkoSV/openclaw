@@ -229,6 +229,14 @@ const CORE_TOOL_DEFINITIONS: CoreToolDefinition[] = [
     includeInOpenClawGroup: true,
   },
   {
+    id: "request_user_location",
+    label: "request_user_location",
+    description: "Ask the current user to share their location",
+    sectionId: "messaging",
+    profiles: ["coding", "messaging"],
+    includeInOpenClawGroup: true,
+  },
+  {
     id: "cron",
     label: "cron",
     description: CRON_TOOL_DISPLAY_SUMMARY,

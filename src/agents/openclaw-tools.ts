@@ -43,6 +43,10 @@ import { createMessageTool } from "./tools/message-tool.js";
 import { createMusicGenerateTool } from "./tools/music-generate-tool.js";
 import { createNodesTool } from "./tools/nodes-tool.js";
 import { createPdfTool } from "./tools/pdf-tool.js";
+import {
+  createRequestUserLocationTool,
+  type RequestUserLocationDeliveredEffect,
+} from "./tools/request-user-location-tool.js";
 import { createSessionStatusTool } from "./tools/session-status-tool.js";
 import { createSessionsHistoryTool } from "./tools/sessions-history-tool.js";
 import { createSessionsListTool } from "./tools/sessions-list-tool.js";
@@ -153,6 +157,8 @@ export function createOpenClawTools(
     spawnWorkspaceDir?: string;
     /** Callback invoked when sessions_yield tool is called. */
     onYield?: (message: string) => Promise<void> | void;
+    /** Called when a structured interaction tool delivers user-visible UI itself. */
+    onStructuredInteractionDelivered?: (effect: RequestUserLocationDeliveredEffect) => void;
     /** Allow plugin tools for this tool set to late-bind the gateway subagent. */
     allowGatewaySubagentBinding?: boolean;
   } & SpawnedToolContext,
@@ -386,6 +392,10 @@ export function createOpenClawTools(
       config: resolvedConfig,
       agentId: sessionAgentId,
       agentAccountId: options?.agentAccountId,
+    }),
+    createRequestUserLocationTool({
+      config: options?.config,
+      onDelivered: options?.onStructuredInteractionDelivered,
     }),
     ...collectPresentOpenClawTools([imageGenerateTool, musicGenerateTool, videoGenerateTool]),
     ...(embedded

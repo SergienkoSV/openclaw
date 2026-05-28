@@ -453,6 +453,42 @@ export const FIELD_HELP: Record<string, string> = {
     "Default number of hidden catalog search results returned by `tools.search` inside code mode.",
   "tools.codeMode.maxSearchLimit":
     "Maximum number of hidden catalog search results a code-mode program can request.",
+  structuredDelivery:
+    "Harness-owned structured delivery. Matching tool results provide trusted delivery fields, the model supplies only message copy JSON, and OpenClaw validates before invoking the delivery hook.",
+  "structuredDelivery.enabled": "Enable structured delivery trigger handling.",
+  "structuredDelivery.delivery":
+    "Controls how validated structured delivery envelopes are handed to user-provided delivery code.",
+  "structuredDelivery.delivery.hooks":
+    "Contract-specific hook scripts invoked after OpenClaw validates the matching structured delivery envelope.",
+  "structuredDelivery.delivery.hooks.app_result": "Hook script settings for app_result envelopes.",
+  "structuredDelivery.delivery.hooks.app_result.path":
+    "Required path to the app_result hook script when structured delivery is enabled. Relative paths resolve under the OpenClaw state directory.",
+  "structuredDelivery.delivery.hooks.app_result.timeoutMs":
+    "Maximum time OpenClaw waits for the app_result hook before failing closed.",
+  "structuredDelivery.delivery.hooks.location_request":
+    "Hook script settings for location_request envelopes.",
+  "structuredDelivery.delivery.hooks.location_request.path":
+    "Required path to the location_request hook script when structured delivery is enabled. Relative paths resolve under the OpenClaw state directory.",
+  "structuredDelivery.delivery.hooks.location_request.timeoutMs":
+    "Maximum time OpenClaw waits for the location_request hook before failing closed.",
+  "structuredDelivery.retry":
+    "Controls bounded validation reprompts when the model returns invalid structured delivery copy.",
+  "structuredDelivery.retry.maxAttempts":
+    "Maximum number of validation reprompts after the initial model copy is invalid. Set 0 to fail without reprompting.",
+  "structuredDelivery.triggers":
+    "Tool names that switch the current run into structured delivery mode after a successful result.",
+  "structuredDelivery.triggers[].tool":
+    "Normalized tool name that activates the structured delivery contract after it succeeds. Optional when matching by MCP server or tool.",
+  "structuredDelivery.triggers[].mcpServer":
+    "MCP server name from the tool result details. Use this with mcpTool to target a specific MCP endpoint.",
+  "structuredDelivery.triggers[].mcpTool":
+    "MCP tool name from the tool result details. Use this with mcpServer to target a specific MCP endpoint.",
+  "structuredDelivery.triggers[].contract":
+    "Structured delivery contract to use. Currently only `app_result` is supported.",
+  "structuredDelivery.triggers[].trustedFields":
+    "Dot paths for trusted delivery fields inside the tool result. These fields are owned by the harness, not the model.",
+  "structuredDelivery.triggers[].requiredTrustedFields":
+    "Trusted fields that must be present before OpenClaw asks the model for delivery copy. `url` is required by default for `app_result`.",
   "tools.elevated":
     "Elevated tool access controls for privileged command surfaces that should only be reachable from trusted senders. Keep disabled unless operator workflows explicitly require elevated actions.",
   "tools.elevated.enabled":
