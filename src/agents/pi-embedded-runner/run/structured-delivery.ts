@@ -46,7 +46,7 @@ export async function runStructuredDeliveryValidation(params: {
   pending?: PendingStructuredDelivery;
   captureFailure?: StructuredDeliveryCaptureFailure;
   assistantTexts: string[];
-  promptModel: (prompt: string) => Promise<void>;
+  promptModel: (prompt: string) => Promise<string | undefined | void>;
   deliverHook?: (params: {
     envelope: DeliveryEnvelope;
     pending: PendingStructuredDelivery;
@@ -74,7 +74,17 @@ export async function runStructuredDeliveryValidation(params: {
 
   let pending = params.pending;
   let copyInstructionSent = false;
+  let nextAssistantText =
+    pending && pending.retry.attempts > 0 ? params.assistantTexts.at(-1) : undefined;
   const shouldContinue = params.shouldContinue ?? (() => true);
+  const promptForAssistantText = async (prompt: string): Promise<string | undefined> => {
+    const textCountBeforePrompt = params.assistantTexts.length;
+    const promptedText = await params.promptModel(prompt);
+    if (typeof promptedText === "string") {
+      return promptedText;
+    }
+    return params.assistantTexts.slice(textCountBeforePrompt).at(-1);
+  };
   while (pending && shouldContinue()) {
     if (!copyInstructionSent && pending.retry.attempts === 0) {
       copyInstructionSent = true;
@@ -82,14 +92,16 @@ export async function runStructuredDeliveryValidation(params: {
         `structured delivery copy instruction prompt: runId=${params.runId} ` +
           `sessionId=${params.sessionId} tool=${pending.trigger.toolName}`,
       );
-      await params.promptModel(buildStructuredDeliveryCopyInstruction(pending));
-      continue;
+      nextAssistantText = await promptForAssistantText(
+        buildStructuredDeliveryCopyInstruction(pending),
+      );
     }
 
     const outcome = consumeStructuredDeliveryAssistantText({
       pending,
-      assistantText: params.assistantTexts.at(-1),
+      assistantText: nextAssistantText,
     });
+    nextAssistantText = undefined;
     if (outcome.status === "delivered") {
       const delivery = params.deliverHook
         ? await params.deliverHook({ envelope: outcome.rendered.envelope, pending })
@@ -128,7 +140,7 @@ export async function runStructuredDeliveryValidation(params: {
       `structured delivery model copy invalid; reprompting: runId=${params.runId} ` +
         `sessionId=${params.sessionId} attempt=${pending.retry.attempts}/${pending.retry.maxAttempts}`,
     );
-    await params.promptModel(outcome.prompt);
+    nextAssistantText = await promptForAssistantText(outcome.prompt);
   }
   return undefined;
 }

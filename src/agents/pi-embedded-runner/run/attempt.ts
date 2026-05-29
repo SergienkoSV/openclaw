@@ -4228,11 +4228,14 @@ export async function runEmbeddedAttempt(
         };
 
         const promptForStructuredDeliveryCopy = async (prompt: string) => {
+          const assistantTextCountBeforePrompt = assistantTexts.length;
           await abortable(activeSession.prompt(prompt));
+          await sessionLockController.waitForSessionEvents(activeSession);
           if (params.onBlockReplyFlush) {
             await params.onBlockReplyFlush();
           }
           await waitForStructuredDeliveryRepromptCompaction();
+          return assistantTexts.slice(assistantTextCountBeforePrompt).at(-1);
         };
 
         if (!promptError && !aborted && !yieldAborted) {

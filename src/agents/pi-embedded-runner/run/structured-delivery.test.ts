@@ -97,6 +97,32 @@ describe("runStructuredDeliveryValidation", () => {
     });
   });
 
+  it("validates the response from the structured delivery prompt instead of stale assistant text", async () => {
+    const assistantTexts = ["Вот ближайшие места обычным текстом."];
+    const deliverHook = vi.fn().mockResolvedValue({ ok: true, value: undefined });
+
+    const result = await runStructuredDeliveryValidation({
+      pending: makePending(),
+      assistantTexts,
+      promptModel: async () =>
+        JSON.stringify({
+          message: "Open the prepared result.",
+          items: [{ title: "Place", subtitle: "100 m" }],
+          primaryActionLabel: "Open",
+        }),
+      deliverHook,
+      log: {
+        debug: vi.fn(),
+        warn: vi.fn(),
+      },
+      runId: "run-structured",
+      sessionId: "session-structured",
+    });
+
+    expect(result).toEqual({ delivered: true });
+    expect(deliverHook).toHaveBeenCalledTimes(1);
+  });
+
   it("fails closed when the delivery hook rejects the validated envelope", async () => {
     const result = await runStructuredDeliveryValidation({
       pending: makePending({ retry: { attempts: 1, maxAttempts: 1 } }),
