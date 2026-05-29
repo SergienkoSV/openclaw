@@ -230,6 +230,7 @@ export function captureStructuredDeliveryFromToolResult(params: {
   toolCallId?: string;
   result: unknown;
   isToolError: boolean;
+  trustedFallback?: StructuredDeliveryTrustedFields;
 }): StructuredDeliveryCaptureResult {
   if (params.isToolError) {
     return { status: "idle" };
@@ -263,7 +264,10 @@ export function captureStructuredDeliveryFromToolResult(params: {
   }
 
   const required = validateRequiredTrustedFields({
-    trusted: extracted.value,
+    trusted: {
+      ...params.trustedFallback,
+      ...extracted.value,
+    },
     required: trigger.requiredTrustedFields ?? DEFAULT_REQUIRED_TRUSTED_FIELDS,
   });
   if (!required.ok) {

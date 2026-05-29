@@ -1254,6 +1254,22 @@ export async function handleToolExecutionEnd(
     toolCallId,
     result: sanitizedResult,
     isToolError,
+    trustedFallback: ctx.params.structuredDeliveryRoute
+      ? {
+          ...(ctx.params.structuredDeliveryRoute.surface
+            ? { surface: ctx.params.structuredDeliveryRoute.surface }
+            : {}),
+          ...(ctx.params.structuredDeliveryRoute.target
+            ? { target: ctx.params.structuredDeliveryRoute.target }
+            : {}),
+          ...(ctx.params.structuredDeliveryRoute.accountId
+            ? { accountId: ctx.params.structuredDeliveryRoute.accountId }
+            : {}),
+          ...(ctx.params.structuredDeliveryRoute.threadId != null
+            ? { threadId: ctx.params.structuredDeliveryRoute.threadId }
+            : {}),
+        }
+      : undefined,
   });
   if (structuredDeliveryCapture.status === "pending") {
     ctx.state.pendingStructuredDelivery = structuredDeliveryCapture.pending;

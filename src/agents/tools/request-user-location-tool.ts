@@ -6,6 +6,7 @@ import {
   type StructuredDeliveryResult,
 } from "../../auto-reply/structured-delivery/index.js";
 import type { LocationRequestEnvelope } from "../../auto-reply/structured-delivery/types.js";
+import type { StructuredDeliveryRoute } from "../../auto-reply/structured-delivery/types.js";
 import type { OpenClawConfig } from "../../config/config.js";
 import type { AnyAgentTool } from "./common.js";
 import { jsonResult, ToolInputError } from "./common.js";
@@ -26,6 +27,7 @@ function firstIssueMessage(result: Extract<StructuredDeliveryResult<unknown>, { 
 
 export function createRequestUserLocationTool(options?: {
   config?: OpenClawConfig;
+  deliveryRoute?: StructuredDeliveryRoute;
   deliverHook?: DeliverLocationRequestHook;
   onDelivered?: (effect: RequestUserLocationDeliveredEffect) => void;
 }): AnyAgentTool {
@@ -53,9 +55,12 @@ export function createRequestUserLocationTool(options?: {
         throw new ToolInputError(`Invalid location request: ${firstIssueMessage(envelope)}`);
       }
 
+      const routedEnvelope: LocationRequestEnvelope = options?.deliveryRoute
+        ? { ...envelope.value, route: options.deliveryRoute }
+        : envelope.value;
       const deliver = options?.deliverHook ?? deliverStructuredDeliveryWithHook;
       const delivered = await deliver({
-        envelope: envelope.value,
+        envelope: routedEnvelope,
         hook: resolveStructuredDeliveryHookConfig({
           delivery: options?.config?.structuredDelivery?.delivery,
           kind: "location_request",

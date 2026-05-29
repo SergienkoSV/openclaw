@@ -1,4 +1,5 @@
 import type { SourceReplyDeliveryMode } from "../auto-reply/get-reply-options.types.js";
+import type { StructuredDeliveryRoute } from "../auto-reply/structured-delivery/types.js";
 import type { InboundEventKind } from "../channels/inbound-event/kind.js";
 import { selectApplicableRuntimeConfig } from "../config/config.js";
 import type { OpenClawConfig } from "../config/types.openclaw.js";
@@ -6,6 +7,7 @@ import { callGateway } from "../gateway/call.js";
 import { isEmbeddedMode } from "../infra/embedded-mode.js";
 import { getActiveSecretsRuntimeSnapshot } from "../secrets/runtime-state.js";
 import { getActiveRuntimeWebToolsMetadata } from "../secrets/runtime-web-tools-state.js";
+import { normalizeOptionalString } from "../shared/string-coerce.js";
 import { normalizeDeliveryContext } from "../utils/delivery-context.js";
 import type { GatewayMessageChannel } from "../utils/message-channel.js";
 import { resolveAgentWorkspaceDir, resolveSessionAgentIds } from "./agent-scope.js";
@@ -70,6 +72,38 @@ const defaultOpenClawToolsDeps: OpenClawToolsDeps = {
 };
 
 let openClawToolsDeps: OpenClawToolsDeps = defaultOpenClawToolsDeps;
+
+function buildStructuredDeliveryRoute(options?: {
+  agentChannel?: GatewayMessageChannel;
+  currentChannelId?: string;
+  agentTo?: string;
+  agentAccountId?: string;
+  currentThreadTs?: string;
+  agentThreadId?: string | number;
+  deliveryContext?: ReturnType<typeof normalizeDeliveryContext>;
+}): StructuredDeliveryRoute | undefined {
+  const target =
+    normalizeOptionalString(options?.currentChannelId) ??
+    normalizeOptionalString(options?.agentTo) ??
+    normalizeOptionalString(options?.deliveryContext?.to);
+  const surface =
+    normalizeOptionalString(options?.agentChannel) ??
+    normalizeOptionalString(options?.deliveryContext?.channel);
+  const accountId =
+    normalizeOptionalString(options?.agentAccountId) ??
+    normalizeOptionalString(options?.deliveryContext?.accountId);
+  const threadId =
+    normalizeOptionalString(options?.currentThreadTs) ??
+    options?.agentThreadId ??
+    options?.deliveryContext?.threadId;
+  const route: StructuredDeliveryRoute = {
+    ...(surface ? { surface } : {}),
+    ...(target ? { target } : {}),
+    ...(accountId ? { accountId } : {}),
+    ...(threadId != null ? { threadId } : {}),
+  };
+  return Object.keys(route).length > 0 ? route : undefined;
+}
 
 export function createOpenClawTools(
   options?: {
@@ -191,6 +225,15 @@ export function createOpenClawTools(
     to: options?.agentTo,
     accountId: options?.agentAccountId,
     threadId: options?.agentThreadId,
+  });
+  const structuredDeliveryRoute = buildStructuredDeliveryRoute({
+    agentChannel: options?.agentChannel,
+    currentChannelId: options?.currentChannelId,
+    agentTo: options?.agentTo,
+    agentAccountId: options?.agentAccountId,
+    currentThreadTs: options?.currentThreadTs,
+    agentThreadId: options?.agentThreadId,
+    deliveryContext,
   });
   const runtimeWebTools = getActiveRuntimeWebToolsMetadata();
   const sandbox =
@@ -395,6 +438,7 @@ export function createOpenClawTools(
     }),
     createRequestUserLocationTool({
       config: options?.config,
+      deliveryRoute: structuredDeliveryRoute,
       onDelivered: options?.onStructuredInteractionDelivered,
     }),
     ...collectPresentOpenClawTools([imageGenerateTool, musicGenerateTool, videoGenerateTool]),

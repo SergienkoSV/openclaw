@@ -9,6 +9,12 @@ describe("request_user_location tool", () => {
     const tool = createRequestUserLocationTool({
       deliverHook,
       onDelivered,
+      deliveryRoute: {
+        surface: "telegram",
+        target: "user-1",
+        accountId: "default",
+        threadId: "thread-1",
+      },
       config: {
         structuredDelivery: {
           delivery: {
@@ -35,6 +41,12 @@ describe("request_user_location tool", () => {
         button: {
           label: "Share",
           requestLocation: true,
+        },
+        route: {
+          surface: "telegram",
+          target: "user-1",
+          accountId: "default",
+          threadId: "thread-1",
         },
       },
       hook: {

@@ -90,6 +90,13 @@ export type DeliveryEnvelopeItem = {
   subtitle?: string;
 };
 
+export type StructuredDeliveryRoute = {
+  surface?: string;
+  target?: string;
+  accountId?: string;
+  threadId?: string | number;
+};
+
 export type AppResultDeliveryEnvelope = {
   kind: "app_result";
   title?: string;
@@ -99,12 +106,7 @@ export type AppResultDeliveryEnvelope = {
     label: string;
     url: string;
   };
-  route: {
-    surface?: string;
-    target?: string;
-    accountId?: string;
-    threadId?: string | number;
-  };
+  route: StructuredDeliveryRoute;
 };
 
 export type LocationRequestEnvelope = {
@@ -114,12 +116,7 @@ export type LocationRequestEnvelope = {
     label: string;
     requestLocation: true;
   };
-  route?: {
-    surface?: string;
-    target?: string;
-    accountId?: string;
-    threadId?: string | number;
-  };
+  route?: StructuredDeliveryRoute;
 };
 
 export type DeliveryEnvelope = AppResultDeliveryEnvelope | LocationRequestEnvelope;

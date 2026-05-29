@@ -333,6 +333,57 @@ describe("handleToolExecutionEnd structured delivery capture", () => {
     expect(ctx.state.structuredDeliveryCaptureFailure).toBeUndefined();
   });
 
+  it("adds trusted runtime route fields to captured structured delivery", async () => {
+    const { ctx } = createTestContext();
+    ctx.params.config = {
+      structuredDelivery: {
+        enabled: true,
+        triggers: [
+          {
+            tool: "demo__build_app_result",
+            contract: "app_result",
+            trustedFields: {
+              urlPath: "details.structuredContent.action_url",
+            },
+          },
+        ],
+      },
+    } as unknown as ToolHandlerContext["params"]["config"];
+    ctx.params.structuredDeliveryRoute = {
+      surface: "telegram",
+      target: "215312334",
+      accountId: "default",
+      threadId: "topic-1",
+    };
+
+    await handleToolExecutionEnd(
+      ctx as never,
+      {
+        type: "tool_execution_end",
+        toolName: "demo__build_app_result",
+        toolCallId: "tool-structured-route",
+        isError: false,
+        result: {
+          details: {
+            structuredContent: {
+              action_url: "https://example.test/app",
+            },
+          },
+        },
+      } as never,
+    );
+
+    expect(ctx.state.pendingStructuredDelivery).toMatchObject({
+      trusted: {
+        url: "https://example.test/app",
+        surface: "telegram",
+        target: "215312334",
+        accountId: "default",
+        threadId: "topic-1",
+      },
+    });
+  });
+
   it("records capture failure when a configured trigger omits trusted URL", async () => {
     const { ctx } = createTestContext();
     ctx.params.config = {

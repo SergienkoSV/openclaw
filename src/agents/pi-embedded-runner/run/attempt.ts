@@ -8,6 +8,7 @@ import { isAcpRuntimeSpawnAvailable } from "../../../acp/runtime/availability.js
 import { buildHierarchyReinforcementMessage } from "../../../auto-reply/handoff-summarizer.js";
 import { filterHeartbeatPairs } from "../../../auto-reply/heartbeat-filter.js";
 import { stripInboundMetadata } from "../../../auto-reply/reply/strip-inbound-meta.js";
+import type { StructuredDeliveryRoute } from "../../../auto-reply/structured-delivery/types.js";
 import { getRuntimeConfig } from "../../../config/config.js";
 import { resolveStorePath } from "../../../config/sessions/paths.js";
 import {
@@ -1054,6 +1055,36 @@ export function resolveAttemptToolPolicyMessageProvider(params: {
   messageChannel?: string;
 }): string | undefined {
   return params.messageProvider ?? params.messageChannel;
+}
+
+function buildAttemptStructuredDeliveryRoute(
+  params: Pick<
+    EmbeddedRunAttemptParams,
+    | "messageChannel"
+    | "messageProvider"
+    | "messageTo"
+    | "agentAccountId"
+    | "messageThreadId"
+    | "currentChannelId"
+    | "currentThreadTs"
+  >,
+): StructuredDeliveryRoute | undefined {
+  const surface = normalizeOptionalString(params.messageChannel ?? params.messageProvider);
+  const target =
+    normalizeOptionalString(params.currentChannelId) ?? normalizeOptionalString(params.messageTo);
+  const accountId = normalizeOptionalString(params.agentAccountId);
+  const threadId =
+    normalizeOptionalString(params.currentThreadTs) ??
+    (typeof params.messageThreadId === "string" || typeof params.messageThreadId === "number"
+      ? params.messageThreadId
+      : undefined);
+  const route: StructuredDeliveryRoute = {
+    ...(surface ? { surface } : {}),
+    ...(target ? { target } : {}),
+    ...(accountId ? { accountId } : {}),
+    ...(threadId != null ? { threadId } : {}),
+  };
+  return Object.keys(route).length > 0 ? route : undefined;
 }
 
 function collectAttemptExplicitToolAllowlistSources(params: {
@@ -3165,6 +3196,7 @@ export async function runEmbeddedAttempt(
           enforceFinalTag: params.enforceFinalTag,
           silentExpected: params.silentExpected,
           config: params.config,
+          structuredDeliveryRoute: buildAttemptStructuredDeliveryRoute(params),
           sessionKey: sandboxSessionKey,
           sessionId: params.sessionId,
           agentId: sessionAgentId,
