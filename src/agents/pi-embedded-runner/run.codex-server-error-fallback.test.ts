@@ -69,4 +69,44 @@ describe("runEmbeddedPiAgent Codex server_error fallback handoff", () => {
       "LLM error server_error: An error occurred while processing your request.",
     );
   });
+
+  it("throws FailoverError for unstructured provider backend errors when model fallbacks are configured", async () => {
+    const rawBackendError =
+      "Backend returned unexpected response. Please contact Microsoft for help.";
+
+    mockedClassifyFailoverReason.mockReturnValue("timeout");
+    mockedIsFailoverAssistantError.mockReturnValue(true);
+    mockedFormatAssistantErrorText.mockReturnValue(rawBackendError);
+    const currentAttemptAssistant = makeAssistantMessageFixture({
+      stopReason: "error",
+      errorMessage: rawBackendError,
+      provider: "openrouter",
+      model: "openai/gpt-5.4-mini",
+    });
+    mockedRunEmbeddedAttempt.mockResolvedValueOnce(
+      makeAttemptResult({
+        assistantTexts: [],
+        lastAssistant: currentAttemptAssistant,
+        currentAttemptAssistant,
+      }),
+    );
+
+    const promise = runEmbeddedPiAgent({
+      ...overflowBaseRunParams,
+      runId: "run-openrouter-backend-error-fallback",
+      config: makeModelFallbackCfg({
+        agents: {
+          defaults: {
+            model: {
+              primary: "openrouter/openai/gpt-5.4-mini",
+              fallbacks: ["openrouter/openai/gpt-5.4"],
+            },
+          },
+        },
+      }),
+    });
+
+    await expect(promise).rejects.toBeInstanceOf(MockedFailoverError);
+    await expect(promise).rejects.toThrow(rawBackendError);
+  });
 });

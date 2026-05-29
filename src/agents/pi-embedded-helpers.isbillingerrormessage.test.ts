@@ -834,6 +834,14 @@ describe("classifyFailoverReason HTTP 410 handling", () => {
     expect(classifyFailoverReason("Provider returned error", { provider: "openrouter" })).toBe(
       "timeout",
     );
+    expect(
+      classifyFailoverReason(
+        "Backend returned unexpected response. Please contact Microsoft for help.",
+        {
+          provider: "openrouter",
+        },
+      ),
+    ).toBe("timeout");
     expect(classifyFailoverReason("Key limit exceeded", { provider: "openrouter" })).toBe(
       "billing",
     );
