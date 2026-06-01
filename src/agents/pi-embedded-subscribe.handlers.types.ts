@@ -200,6 +200,7 @@ type ToolHandlerParams = Pick<
   | "sessionId"
   | "agentId"
   | "config"
+  | "structuredDeliveryRoute"
   | "toolResultFormat"
   | "toolProgressDetail"
 >;

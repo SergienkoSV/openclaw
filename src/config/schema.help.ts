@@ -484,11 +484,19 @@ export const FIELD_HELP: Record<string, string> = {
   "structuredDelivery.triggers[].mcpTool":
     "MCP tool name from the tool result details. Use this with mcpServer to target a specific MCP endpoint.",
   "structuredDelivery.triggers[].contract":
-    "Structured delivery contract to use. Currently only `app_result` is supported.",
+    "Legacy structured delivery contract to use. Prefer `delivery`; currently only `app_result` is supported.",
+  "structuredDelivery.triggers[].delivery":
+    "Structured delivery contract to use in simplified trigger config. Currently only `app_result` is supported.",
+  "structuredDelivery.triggers[].copy":
+    "Model-copy preset for this trigger: `message_only`, `with_items`, `app_result.message_only`, or `app_result.with_items`.",
+  "structuredDelivery.triggers[].trusted":
+    "Simplified dot paths for trusted delivery fields inside the tool result. Use keys such as `url` and `items`.",
   "structuredDelivery.triggers[].trustedFields":
-    "Dot paths for trusted delivery fields inside the tool result. These fields are owned by the harness, not the model.",
+    "Legacy dot paths for trusted delivery fields inside the tool result. These fields are owned by the harness, not the model.",
+  "structuredDelivery.triggers[].requiredTrusted":
+    "Simplified required trusted fields. `url` is required by default for `app_result`.",
   "structuredDelivery.triggers[].requiredTrustedFields":
-    "Trusted fields that must be present before OpenClaw asks the model for delivery copy. `url` is required by default for `app_result`.",
+    "Legacy trusted fields that must be present before OpenClaw asks the model for delivery copy. `url` is required by default for `app_result`.",
   "tools.elevated":
     "Elevated tool access controls for privileged command surfaces that should only be reachable from trusted senders. Keep disabled unless operator workflows explicitly require elevated actions.",
   "tools.elevated.enabled":

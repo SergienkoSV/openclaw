@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
   buildStructuredDeliveryValidationReprompt,
+  buildStructuredDeliveryCopyInstruction,
   consumeStructuredDeliveryAssistantText,
   composeStructuredDeliveryEnvelope,
   extractStructuredDeliveryTrustedFields,
@@ -179,6 +180,32 @@ describe("structured delivery", () => {
     });
   });
 
+  it("rejects items for message-only copy presets", () => {
+    const parsed = parseModelDeliveryCopyJson(
+      JSON.stringify({
+        message: "Open the prepared result.",
+        items: [{ title: "Unexpected" }],
+      }),
+      { preset: "message_only" },
+    );
+
+    expect(parsed).toMatchObject({
+      ok: false,
+      code: "model_copy_invalid",
+      issues: [{ path: "items" }],
+    });
+  });
+
+  it("prints the active copy preset shape in model prompts", () => {
+    const prompt = buildStructuredDeliveryCopyInstruction(
+      makePending({ copy: { preset: "message_only" } }),
+    );
+
+    expect(prompt).toContain("Expected JSON shape:");
+    expect(prompt).toContain('"message": "required user-facing message"');
+    expect(prompt).toContain("Do not include items for this tool.");
+  });
+
   it("builds a narrow validation reprompt", () => {
     const parsed = parseModelDeliveryCopyJson(JSON.stringify({ title: "No message" }));
     expect(parsed.ok).toBe(false);
@@ -186,9 +213,10 @@ describe("structured delivery", () => {
       return;
     }
 
-    const reprompt = buildStructuredDeliveryValidationReprompt(parsed.issues);
+    const reprompt = buildStructuredDeliveryValidationReprompt(parsed.issues, "with_items");
 
     expect(reprompt).toContain("Return only valid JSON");
+    expect(reprompt).toContain("Expected JSON shape:");
     expect(reprompt).toContain("Do not include URL");
     expect(reprompt).toContain("message");
   });

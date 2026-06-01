@@ -226,6 +226,25 @@ const StructuredDeliveryTrustedFieldSchema = z.union([
 
 const StructuredDeliveryPathSchema = z.string().trim().min(1);
 
+const StructuredDeliveryCopyPresetSchema = z.union([
+  z.literal("message_only"),
+  z.literal("with_items"),
+  z.literal("app_result.message_only"),
+  z.literal("app_result.with_items"),
+]);
+
+const StructuredDeliveryTrustedAliasesSchema = z
+  .object({
+    url: StructuredDeliveryPathSchema.optional(),
+    target: StructuredDeliveryPathSchema.optional(),
+    surface: StructuredDeliveryPathSchema.optional(),
+    accountId: StructuredDeliveryPathSchema.optional(),
+    threadId: StructuredDeliveryPathSchema.optional(),
+    items: StructuredDeliveryPathSchema.optional(),
+    metadata: StructuredDeliveryPathSchema.optional(),
+  })
+  .strict();
+
 const StructuredDeliveryHookSchema = z
   .object({
     path: z.string().trim().min(1),
@@ -261,7 +280,10 @@ const StructuredDeliverySchema = z
             tool: z.string().trim().min(1).optional(),
             mcpServer: z.string().trim().min(1).optional(),
             mcpTool: z.string().trim().min(1).optional(),
-            contract: z.literal("app_result"),
+            contract: z.literal("app_result").optional(),
+            delivery: z.literal("app_result").optional(),
+            copy: StructuredDeliveryCopyPresetSchema.optional(),
+            trusted: StructuredDeliveryTrustedAliasesSchema.optional(),
             trustedFields: z
               .object({
                 urlPath: StructuredDeliveryPathSchema.optional(),
@@ -274,10 +296,19 @@ const StructuredDeliverySchema = z
               })
               .strict()
               .optional(),
+            requiredTrusted: z.array(StructuredDeliveryTrustedFieldSchema).optional(),
             requiredTrustedFields: z.array(StructuredDeliveryTrustedFieldSchema).optional(),
           })
           .strict()
           .superRefine((trigger, ctx) => {
+            if (!trigger.contract && !trigger.delivery) {
+              ctx.addIssue({
+                code: z.ZodIssueCode.custom,
+                path: ["delivery"],
+                message:
+                  "structuredDelivery.triggers[] must define delivery: app_result or legacy contract: app_result.",
+              });
+            }
             if (!trigger.tool && !trigger.mcpServer && !trigger.mcpTool) {
               ctx.addIssue({
                 code: z.ZodIssueCode.custom,

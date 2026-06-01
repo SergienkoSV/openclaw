@@ -21,8 +21,20 @@ export type StructuredDeliveryTriggerConfig = {
   tool?: string;
   mcpServer?: string;
   mcpTool?: string;
-  contract: "app_result";
+  delivery?: "app_result";
+  contract?: "app_result";
+  copy?: "message_only" | "with_items" | "app_result.message_only" | "app_result.with_items";
+  trusted?: {
+    url?: string;
+    target?: string;
+    surface?: string;
+    accountId?: string;
+    threadId?: string;
+    items?: string;
+    metadata?: string;
+  };
   trustedFields?: StructuredDeliveryTrustedFieldPathsConfig;
+  requiredTrusted?: StructuredDeliveryTrustedField[];
   requiredTrustedFields?: StructuredDeliveryTrustedField[];
 };
 

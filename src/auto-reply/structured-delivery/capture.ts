@@ -11,6 +11,7 @@ import type {
   StructuredDeliveryCaptureFailure,
   StructuredDeliveryDeliveryConfig,
   StructuredDeliveryHookConfig,
+  StructuredDeliveryCopyPreset,
   StructuredDeliveryTriggerConfig,
   StructuredDeliveryTrustedFieldPaths,
   StructuredDeliveryTrustedFields,
@@ -62,6 +63,17 @@ function normalizeContract(value: unknown): "app_result" | undefined {
   return normalizeOptionalString(value) === "app_result" ? "app_result" : undefined;
 }
 
+function normalizeCopyPreset(value: unknown): StructuredDeliveryCopyPreset | undefined {
+  const normalized = normalizeOptionalString(value);
+  if (normalized === "message_only" || normalized === "app_result.message_only") {
+    return "message_only";
+  }
+  if (normalized === "with_items" || normalized === "app_result.with_items") {
+    return "with_items";
+  }
+  return undefined;
+}
+
 function normalizePaths(value: unknown): StructuredDeliveryTrustedFieldPaths | undefined {
   if (!isRecord(value)) {
     return undefined;
@@ -79,6 +91,29 @@ function normalizePaths(value: unknown): StructuredDeliveryTrustedFieldPaths | u
     const normalized = normalizeOptionalString(value[key]);
     if (normalized) {
       fields[key] = normalized;
+    }
+  }
+  return Object.keys(fields).length > 0 ? fields : undefined;
+}
+
+function normalizeTrustedAliases(value: unknown): StructuredDeliveryTrustedFieldPaths | undefined {
+  if (!isRecord(value)) {
+    return undefined;
+  }
+  const aliases = [
+    ["url", "urlPath"],
+    ["target", "targetPath"],
+    ["surface", "surfacePath"],
+    ["accountId", "accountIdPath"],
+    ["threadId", "threadIdPath"],
+    ["items", "itemsPath"],
+    ["metadata", "metadataPath"],
+  ] as const;
+  const fields: StructuredDeliveryTrustedFieldPaths = {};
+  for (const [alias, pathKey] of aliases) {
+    const normalized = normalizeOptionalString(value[alias]);
+    if (normalized) {
+      fields[pathKey] = normalized;
     }
   }
   return Object.keys(fields).length > 0 ? fields : undefined;
@@ -161,21 +196,24 @@ function normalizeTrigger(value: unknown): StructuredDeliveryTriggerConfig | und
   const tool = normalizeToolName(value.tool);
   const mcpServer = normalizeMcpSelector(value.mcpServer);
   const mcpTool = normalizeMcpSelector(value.mcpTool);
-  const contract = normalizeContract(value.contract);
+  const contract = normalizeContract(value.contract) ?? normalizeContract(value.delivery);
   if (!contract || (!tool && !mcpServer && !mcpTool)) {
     return undefined;
   }
+  const copyPreset = normalizeCopyPreset(value.copy);
+  const trustedFields =
+    normalizePaths(value.trustedFields) ?? normalizeTrustedAliases(value.trusted);
+  const requiredTrustedFields =
+    normalizeRequiredFields(value.requiredTrustedFields) ??
+    normalizeRequiredFields(value.requiredTrusted);
   return {
     ...(tool ? { tool } : {}),
     ...(mcpServer ? { mcpServer } : {}),
     ...(mcpTool ? { mcpTool } : {}),
     contract,
-    ...(normalizePaths(value.trustedFields)
-      ? { trustedFields: normalizePaths(value.trustedFields) }
-      : {}),
-    ...(normalizeRequiredFields(value.requiredTrustedFields)
-      ? { requiredTrustedFields: normalizeRequiredFields(value.requiredTrustedFields) }
-      : {}),
+    copy: { preset: copyPreset ?? "with_items" },
+    ...(trustedFields ? { trustedFields } : {}),
+    ...(requiredTrustedFields ? { requiredTrustedFields } : {}),
   };
 }
 
@@ -292,6 +330,7 @@ export function captureStructuredDeliveryFromToolResult(params: {
         attempts: 0,
         maxAttempts: normalizeMaxAttempts(config?.retry?.maxAttempts),
       },
+      copy: trigger.copy,
       ...(delivery ? { delivery } : {}),
     },
   };

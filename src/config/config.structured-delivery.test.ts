@@ -105,6 +105,38 @@ describe("config: structuredDelivery", () => {
     expect(res.ok).toBe(true);
   });
 
+  it("accepts simplified structured delivery trigger config", () => {
+    const res = validateConfigObject({
+      structuredDelivery: {
+        enabled: true,
+        delivery: {
+          hooks: {
+            app_result: {
+              path: "hooks/structured-delivery/app_result.sh",
+            },
+            location_request: {
+              path: "hooks/structured-delivery/location_request.sh",
+            },
+          },
+        },
+        triggers: [
+          {
+            mcpServer: "demo-server",
+            mcpTool: "render_widget",
+            delivery: "app_result",
+            copy: "message_only",
+            trusted: {
+              url: "details.structuredContent.widget_url",
+            },
+            requiredTrusted: ["url"],
+          },
+        ],
+      },
+    });
+
+    expect(res.ok).toBe(true);
+  });
+
   it("rejects enabled structured delivery without app result hook path", () => {
     const res = validateConfigObject({
       structuredDelivery: {

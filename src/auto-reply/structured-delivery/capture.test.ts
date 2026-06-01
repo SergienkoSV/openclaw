@@ -68,6 +68,55 @@ describe("structured delivery capture", () => {
           attempts: 0,
           maxAttempts: 1,
         },
+        copy: {
+          preset: "with_items",
+        },
+      },
+    });
+  });
+
+  it("captures trusted fields from the simplified trigger format", () => {
+    const captured = captureStructuredDeliveryFromToolResult({
+      config: {
+        structuredDelivery: {
+          enabled: true,
+          triggers: [
+            {
+              mcpServer: "demo-server",
+              mcpTool: "render_widget",
+              delivery: "app_result",
+              copy: "message_only",
+              trusted: {
+                url: "details.structuredContent.widget_url",
+              },
+              requiredTrusted: ["url"],
+            },
+          ],
+        },
+      },
+      toolName: "mcp",
+      toolCallId: "call-simple",
+      result: {
+        details: {
+          mcpServer: "demo-server",
+          mcpTool: "render_widget",
+          structuredContent: {
+            widget_url: "https://example.test/widget",
+          },
+        },
+      },
+      isToolError: false,
+    });
+
+    expect(captured).toMatchObject({
+      status: "pending",
+      pending: {
+        copy: {
+          preset: "message_only",
+        },
+        trusted: {
+          url: "https://example.test/widget",
+        },
       },
     });
   });

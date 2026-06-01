@@ -46,6 +46,8 @@ export type StructuredDeliveryTrustedFields = {
   metadata?: Record<string, unknown>;
 };
 
+export type StructuredDeliveryCopyPreset = "message_only" | "with_items";
+
 export type PendingStructuredDelivery = {
   contractId: "app_result";
   trigger: {
@@ -58,6 +60,9 @@ export type PendingStructuredDelivery = {
   retry: {
     attempts: number;
     maxAttempts: number;
+  };
+  copy?: {
+    preset: StructuredDeliveryCopyPreset;
   };
   delivery?: StructuredDeliveryDeliveryConfig;
 };
@@ -136,6 +141,9 @@ export type StructuredDeliveryTriggerConfig = {
   mcpServer?: string;
   mcpTool?: string;
   contract: "app_result";
+  copy?: {
+    preset: StructuredDeliveryCopyPreset;
+  };
   trustedFields?: StructuredDeliveryTrustedFieldPaths;
   requiredTrustedFields?: Array<keyof StructuredDeliveryTrustedFields>;
 };

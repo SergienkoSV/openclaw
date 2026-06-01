@@ -54,7 +54,9 @@ export function consumeStructuredDeliveryAssistantText(params: {
   pending: PendingStructuredDelivery;
   assistantText: string | undefined;
 }): StructuredDeliveryAssistantOutcome {
-  const parsed = parseModelDeliveryCopyJson(params.assistantText ?? "");
+  const parsed = parseModelDeliveryCopyJson(params.assistantText ?? "", {
+    preset: params.pending.copy?.preset,
+  });
   if (!parsed.ok) {
     if (params.pending.retry.attempts >= params.pending.retry.maxAttempts) {
       return {
@@ -65,7 +67,7 @@ export function consumeStructuredDeliveryAssistantText(params: {
     }
     return {
       status: "reprompt",
-      prompt: buildStructuredDeliveryValidationReprompt(parsed.issues),
+      prompt: buildStructuredDeliveryValidationReprompt(parsed.issues, params.pending.copy?.preset),
       pending: incrementAttempts(params.pending),
       issues: parsed.issues,
     };

@@ -44,11 +44,62 @@ Structured delivery is enabled through `structuredDelivery`.
 
 When `structuredDelivery.enabled` is `true`, OpenClaw validates configured hook paths at config load time. Missing paths are configuration errors.
 
+Tools opt in with entries in `structuredDelivery.triggers`. Prefer the simplified trigger shape:
+
+```json
+{
+  "structuredDelivery": {
+    "triggers": [
+      {
+        "mcpServer": "places",
+        "mcpTool": "build_map_widget",
+        "delivery": "app_result",
+        "copy": "with_items",
+        "trusted": {
+          "url": "details.structuredContent.widget.url",
+          "items": "details.structuredContent.items"
+        },
+        "requiredTrusted": ["url"]
+      }
+    ]
+  }
+}
+```
+
+`delivery` selects the delivery contract. `copy` selects the model-copy preset. `trusted` maps trusted tool-result fields into the delivery envelope. The model is never asked to provide these trusted fields.
+
+Legacy trigger keys remain supported for existing configs:
+
+```json
+{
+  "mcpServer": "places",
+  "mcpTool": "build_map_widget",
+  "contract": "app_result",
+  "trustedFields": {
+    "urlPath": "details.structuredContent.widget.url",
+    "itemsPath": "details.structuredContent.items"
+  },
+  "requiredTrustedFields": ["url"]
+}
+```
+
 ## App Result Contract
 
 The `app_result` contract is used after a tool or MCP endpoint returns trusted delivery facts, such as an action URL. The model supplies only the user-facing copy.
 
-The model-owned JSON is:
+OpenClaw supports two model-copy presets.
+
+`message_only` expects:
+
+```json
+{
+  "title": "Result ready",
+  "message": "Review the prepared result.",
+  "primaryActionLabel": "Open"
+}
+```
+
+`with_items` expects:
 
 ```json
 {
@@ -64,7 +115,7 @@ The model-owned JSON is:
 }
 ```
 
-Only `message` is required. `title`, `items`, and `primaryActionLabel` are optional.
+Only `message` is required. `title`, `items`, and `primaryActionLabel` are optional when the active preset allows them. `message_only` rejects model-authored `items`.
 
 The model must not supply URLs, transport payloads, shell commands, tokens, chat IDs, thread IDs, or other routing fields. If those fields appear in model output, OpenClaw ignores them for delivery.
 

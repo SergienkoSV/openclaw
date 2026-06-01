@@ -2,6 +2,7 @@ import { normalizeOptionalString } from "../../shared/string-coerce.js";
 import type {
   AppResultDeliveryEnvelope,
   DeliveryEnvelopeItem,
+  StructuredDeliveryCopyPreset,
   ModelDeliveryCopy,
   ModelDeliveryCopyItem,
   StructuredDeliveryFailureCode,
@@ -23,6 +24,10 @@ type ValidationLimits = {
   maxItemTitleChars?: number;
   maxItemSubtitleChars?: number;
   maxItems?: number;
+};
+
+type ModelCopyValidationOptions = ValidationLimits & {
+  preset?: StructuredDeliveryCopyPreset;
 };
 
 function issue(
@@ -172,20 +177,21 @@ function resolveLimits(limits?: ValidationLimits): Required<ValidationLimits> {
 
 export function parseModelDeliveryCopyJson(
   raw: string,
-  limits?: ValidationLimits,
+  options?: ModelCopyValidationOptions,
 ): StructuredDeliveryResult<ModelDeliveryCopy> {
   const parsed = parseJsonObject(raw);
   if (!parsed.ok) {
     return parsed;
   }
-  return validateModelDeliveryCopy(parsed.value, limits);
+  return validateModelDeliveryCopy(parsed.value, options);
 }
 
 export function validateModelDeliveryCopy(
   raw: unknown,
-  limitsInput?: ValidationLimits,
+  options?: ModelCopyValidationOptions,
 ): StructuredDeliveryResult<ModelDeliveryCopy> {
-  const limits = resolveLimits(limitsInput);
+  const limits = resolveLimits(options);
+  const preset = options?.preset ?? "with_items";
   if (!isRecord(raw)) {
     return invalid("model_copy_invalid", [
       issue("model_copy_invalid", "$", "structured delivery copy must be an object"),
@@ -214,7 +220,22 @@ export function validateModelDeliveryCopy(
     code: "model_copy_invalid",
     issues,
   });
-  const normalizedItems = normalizeModelItems(raw.items, limits);
+  const normalizedItems =
+    preset === "message_only"
+      ? {
+          items: undefined,
+          issues:
+            raw.items == null
+              ? []
+              : [
+                  issue(
+                    "model_copy_invalid",
+                    "items",
+                    "items is not allowed for message_only copy",
+                  ),
+                ],
+        }
+      : normalizeModelItems(raw.items, limits);
   issues.push(...normalizedItems.issues);
   if (issues.length > 0 || !message) {
     return invalid("model_copy_invalid", issues);
