@@ -8,6 +8,7 @@ import { isAcpRuntimeSpawnAvailable } from "../../../acp/runtime/availability.js
 import { buildHierarchyReinforcementMessage } from "../../../auto-reply/handoff-summarizer.js";
 import { filterHeartbeatPairs } from "../../../auto-reply/heartbeat-filter.js";
 import { stripInboundMetadata } from "../../../auto-reply/reply/strip-inbound-meta.js";
+import { buildStructuredDeliverySurfaceDeliveryFacts } from "../../../auto-reply/structured-delivery/route.js";
 import type { StructuredDeliveryRoute } from "../../../auto-reply/structured-delivery/types.js";
 import { getRuntimeConfig } from "../../../config/config.js";
 import { resolveStorePath } from "../../../config/sessions/paths.js";
@@ -1084,6 +1085,10 @@ function buildAttemptStructuredDeliveryRoute(
     ...(accountId ? { accountId } : {}),
     ...(threadId != null ? { threadId } : {}),
   };
+  const delivery = buildStructuredDeliverySurfaceDeliveryFacts({ surface, target });
+  if (delivery) {
+    route.delivery = delivery;
+  }
   return Object.keys(route).length > 0 ? route : undefined;
 }
 

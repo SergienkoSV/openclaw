@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import {
   buildStructuredDeliveryValidationReprompt,
   buildStructuredDeliveryCopyInstruction,
+  buildStructuredDeliverySurfaceDeliveryFacts,
   consumeStructuredDeliveryAssistantText,
   composeStructuredDeliveryEnvelope,
   extractStructuredDeliveryTrustedFields,
@@ -32,6 +33,19 @@ function makePending(overrides?: Partial<PendingStructuredDelivery>): PendingStr
 }
 
 describe("structured delivery", () => {
+  it("normalizes Telegram runtime targets into hook delivery facts", () => {
+    expect(
+      buildStructuredDeliverySurfaceDeliveryFacts({
+        surface: "telegram",
+        target: "telegram:direct:123456789",
+      }),
+    ).toEqual({
+      telegram: {
+        chatId: 123456789,
+      },
+    });
+  });
+
   it("extracts trusted fields by configured paths", () => {
     const extracted = extractStructuredDeliveryTrustedFields({
       source: {
@@ -139,6 +153,69 @@ describe("structured delivery", () => {
       ok: false,
       code: "envelope_invalid",
       issues: [{ path: "primaryAction.url" }],
+    });
+  });
+
+  it("fails closed when a Telegram route lacks normalized delivery facts", () => {
+    const parsed = parseModelDeliveryCopyJson(JSON.stringify({ message: "Ready." }));
+    expect(parsed.ok).toBe(true);
+    if (!parsed.ok) {
+      return;
+    }
+
+    const envelope = composeStructuredDeliveryEnvelope({
+      pending: makePending({
+        trusted: {
+          url: "https://example.test/action/123",
+          surface: "telegram",
+          target: "telegram:123456789",
+        },
+      }),
+      copy: parsed.value,
+    });
+
+    expect(envelope).toMatchObject({
+      ok: false,
+      code: "envelope_invalid",
+      issues: [{ path: "route.delivery.telegram.chatId" }],
+    });
+  });
+
+  it("includes normalized Telegram delivery facts in validated envelopes", () => {
+    const parsed = parseModelDeliveryCopyJson(JSON.stringify({ message: "Ready." }));
+    expect(parsed.ok).toBe(true);
+    if (!parsed.ok) {
+      return;
+    }
+
+    const envelope = composeStructuredDeliveryEnvelope({
+      pending: makePending({
+        trusted: {
+          url: "https://example.test/action/123",
+          surface: "telegram",
+          target: "telegram:123456789",
+          delivery: {
+            telegram: {
+              chatId: 123456789,
+            },
+          },
+        },
+      }),
+      copy: parsed.value,
+    });
+
+    expect(envelope).toMatchObject({
+      ok: true,
+      value: {
+        route: {
+          target: "telegram:123456789",
+          delivery: {
+            telegram: {
+              chatId: 123456789,
+            },
+          },
+        },
+      },
     });
   });
 

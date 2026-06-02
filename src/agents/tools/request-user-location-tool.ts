@@ -3,6 +3,7 @@ import {
   buildLocationRequestEnvelope,
   deliverStructuredDeliveryWithHook,
   resolveStructuredDeliveryHookConfig,
+  validateLocationRequestEnvelope,
   type StructuredDeliveryResult,
 } from "../../auto-reply/structured-delivery/index.js";
 import type { LocationRequestEnvelope } from "../../auto-reply/structured-delivery/types.js";
@@ -58,9 +59,15 @@ export function createRequestUserLocationTool(options?: {
       const routedEnvelope: LocationRequestEnvelope = options?.deliveryRoute
         ? { ...envelope.value, route: options.deliveryRoute }
         : envelope.value;
+      const validatedEnvelope = validateLocationRequestEnvelope(routedEnvelope);
+      if (!validatedEnvelope.ok) {
+        throw new ToolInputError(
+          `Location request delivery failed: ${firstIssueMessage(validatedEnvelope)}`,
+        );
+      }
       const deliver = options?.deliverHook ?? deliverStructuredDeliveryWithHook;
       const delivered = await deliver({
-        envelope: routedEnvelope,
+        envelope: validatedEnvelope.value,
         hook: resolveStructuredDeliveryHookConfig({
           delivery: options?.config?.structuredDelivery?.delivery,
           kind: "location_request",

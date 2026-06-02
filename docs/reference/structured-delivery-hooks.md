@@ -139,11 +139,23 @@ type AppResultDeliveryEnvelope = {
     target?: string;
     accountId?: string;
     threadId?: string | number;
+    delivery?: {
+      telegram?: {
+        chatId: number | string;
+      };
+    };
   };
 };
 ```
 
 `primaryAction.url` and `route` come from trusted tool output or runtime context, not from the model.
+`route.target` is an OpenClaw runtime target used for tracing and audit. Hooks must not treat
+`route.target` as a transport payload.
+
+Surface-specific delivery facts live under `route.delivery`. For Telegram delivery,
+OpenClaw normalizes the current conversation target into `route.delivery.telegram.chatId`
+before the hook is called. If a Telegram route cannot be normalized into a Telegram chat id,
+OpenClaw rejects the envelope and does not run the hook.
 
 ## Location Request Contract
 
@@ -173,13 +185,21 @@ type LocationRequestEnvelope = {
     target?: string;
     accountId?: string;
     threadId?: string | number;
+    delivery?: {
+      telegram?: {
+        chatId: number | string;
+      };
+    };
   };
 };
 ```
 
 Incoming location messages are not part of this delivery contract. They continue through the normal inbound pipeline for the active channel.
 
-For Telegram, the hook can implement this contract by sending a reply keyboard button with `request_location: true`. Token handling, chat IDs, proxy settings, and Telegram-specific payload assembly belong in the hook or its environment, not in model output.
+For Telegram, the hook can implement this contract by sending a reply keyboard button with
+`request_location: true`. The hook should use `route.delivery.telegram.chatId` as the
+Telegram `chat_id`. Token handling, proxy settings, and Telegram-specific payload assembly
+belong in the hook or its environment, not in model output.
 
 ## Hook Invocation
 

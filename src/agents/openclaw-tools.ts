@@ -1,4 +1,5 @@
 import type { SourceReplyDeliveryMode } from "../auto-reply/get-reply-options.types.js";
+import { buildStructuredDeliverySurfaceDeliveryFacts } from "../auto-reply/structured-delivery/route.js";
 import type { StructuredDeliveryRoute } from "../auto-reply/structured-delivery/types.js";
 import type { InboundEventKind } from "../channels/inbound-event/kind.js";
 import { selectApplicableRuntimeConfig } from "../config/config.js";
@@ -102,6 +103,10 @@ function buildStructuredDeliveryRoute(options?: {
     ...(accountId ? { accountId } : {}),
     ...(threadId != null ? { threadId } : {}),
   };
+  const delivery = buildStructuredDeliverySurfaceDeliveryFacts({ surface, target });
+  if (delivery) {
+    route.delivery = delivery;
+  }
   return Object.keys(route).length > 0 ? route : undefined;
 }
 

@@ -55,6 +55,7 @@ export function composeStructuredDeliveryEnvelope(params: {
       ...(params.pending.trusted.threadId != null
         ? { threadId: params.pending.trusted.threadId }
         : {}),
+      ...(params.pending.trusted.delivery ? { delivery: params.pending.trusted.delivery } : {}),
     },
   };
   return validateDeliveryEnvelope(envelope);

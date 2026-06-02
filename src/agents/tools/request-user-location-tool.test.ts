@@ -11,9 +11,14 @@ describe("request_user_location tool", () => {
       onDelivered,
       deliveryRoute: {
         surface: "telegram",
-        target: "user-1",
+        target: "telegram:123456789",
         accountId: "default",
         threadId: "thread-1",
+        delivery: {
+          telegram: {
+            chatId: 123456789,
+          },
+        },
       },
       config: {
         structuredDelivery: {
@@ -44,9 +49,14 @@ describe("request_user_location tool", () => {
         },
         route: {
           surface: "telegram",
-          target: "user-1",
+          target: "telegram:123456789",
           accountId: "default",
           threadId: "thread-1",
+          delivery: {
+            telegram: {
+              chatId: 123456789,
+            },
+          },
         },
       },
       hook: {
@@ -72,6 +82,23 @@ describe("request_user_location tool", () => {
     await expect(tool.execute("call-location", { message: "" })).rejects.toThrow(
       /Invalid location request/,
     );
+
+    expect(deliverHook).not.toHaveBeenCalled();
+  });
+
+  it("fails before the hook when a Telegram route lacks a normalized chat id", async () => {
+    const deliverHook = vi.fn();
+    const tool = createRequestUserLocationTool({
+      deliverHook,
+      deliveryRoute: {
+        surface: "telegram",
+        target: "telegram:not-a-chat-id",
+      },
+    });
+
+    await expect(
+      tool.execute("call-location", { message: "Share your location." }),
+    ).rejects.toThrow(/route\.delivery\.telegram\.chatId/);
 
     expect(deliverHook).not.toHaveBeenCalled();
   });

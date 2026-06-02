@@ -42,6 +42,7 @@ export type StructuredDeliveryTrustedFields = {
   surface?: string;
   accountId?: string;
   threadId?: string | number;
+  delivery?: StructuredDeliveryRouteDeliveryFacts;
   items?: StructuredDeliveryTrustedItem[];
   metadata?: Record<string, unknown>;
 };
@@ -100,6 +101,13 @@ export type StructuredDeliveryRoute = {
   target?: string;
   accountId?: string;
   threadId?: string | number;
+  delivery?: StructuredDeliveryRouteDeliveryFacts;
+};
+
+export type StructuredDeliveryRouteDeliveryFacts = {
+  telegram?: {
+    chatId: number | string;
+  };
 };
 
 export type AppResultDeliveryEnvelope = {

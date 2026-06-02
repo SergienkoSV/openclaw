@@ -351,9 +351,14 @@ describe("handleToolExecutionEnd structured delivery capture", () => {
     } as unknown as ToolHandlerContext["params"]["config"];
     ctx.params.structuredDeliveryRoute = {
       surface: "telegram",
-      target: "215312334",
+      target: "123456789",
       accountId: "default",
       threadId: "topic-1",
+      delivery: {
+        telegram: {
+          chatId: 123456789,
+        },
+      },
     };
 
     await handleToolExecutionEnd(
@@ -377,9 +382,14 @@ describe("handleToolExecutionEnd structured delivery capture", () => {
       trusted: {
         url: "https://example.test/app",
         surface: "telegram",
-        target: "215312334",
+        target: "123456789",
         accountId: "default",
         threadId: "topic-1",
+        delivery: {
+          telegram: {
+            chatId: 123456789,
+          },
+        },
       },
     });
   });

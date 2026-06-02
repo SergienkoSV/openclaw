@@ -3,6 +3,7 @@ import type {
   AppResultDeliveryEnvelope,
   DeliveryEnvelopeItem,
   StructuredDeliveryCopyPreset,
+  StructuredDeliveryRoute,
   ModelDeliveryCopy,
   ModelDeliveryCopyItem,
   StructuredDeliveryFailureCode,
@@ -287,6 +288,40 @@ function validateEnvelopeItems(items: DeliveryEnvelopeItem[] | undefined) {
   return issues;
 }
 
+function isValidTelegramChatId(value: unknown): boolean {
+  if (typeof value === "number") {
+    return Number.isSafeInteger(value);
+  }
+  if (typeof value !== "string") {
+    return false;
+  }
+  const trimmed = value.trim();
+  return /^-?\d+$/.test(trimmed) || /^@[A-Za-z0-9_]{5,}$/.test(trimmed);
+}
+
+export function validateStructuredDeliveryRoute(
+  route: StructuredDeliveryRoute | undefined,
+): StructuredDeliveryValidationIssue[] {
+  const issues: StructuredDeliveryValidationIssue[] = [];
+  if (!route) {
+    return issues;
+  }
+  const surface = normalizeOptionalString(route.surface)?.toLowerCase();
+  if (surface === "telegram") {
+    const chatId = route.delivery?.telegram?.chatId;
+    if (!isValidTelegramChatId(chatId)) {
+      issues.push(
+        issue(
+          "envelope_invalid",
+          "route.delivery.telegram.chatId",
+          "route.delivery.telegram.chatId is required for Telegram structured delivery",
+        ),
+      );
+    }
+  }
+  return issues;
+}
+
 export function validateDeliveryEnvelope(
   envelope: AppResultDeliveryEnvelope,
 ): StructuredDeliveryResult<AppResultDeliveryEnvelope> {
@@ -328,6 +363,7 @@ export function validateDeliveryEnvelope(
     );
   }
   issues.push(...validateEnvelopeItems(envelope.items));
+  issues.push(...validateStructuredDeliveryRoute(envelope.route));
   if (issues.length > 0 || !label || !url) {
     return invalid("envelope_invalid", issues);
   }

@@ -1,4 +1,5 @@
 import { normalizeOptionalString } from "../../shared/string-coerce.js";
+import { validateStructuredDeliveryRoute } from "./schema.js";
 import type {
   LocationRequestEnvelope,
   StructuredDeliveryFailureCode,
@@ -34,20 +35,18 @@ function boundedRequiredString(params: {
   raw: unknown;
   path: string;
   maxChars: number;
+  code?: StructuredDeliveryFailureCode;
   issues: StructuredDeliveryValidationIssue[];
 }): string | undefined {
+  const code = params.code ?? "model_copy_invalid";
   const value = normalizeOptionalString(params.raw);
   if (!value) {
-    params.issues.push(issue("model_copy_invalid", params.path, `${params.path} is required`));
+    params.issues.push(issue(code, params.path, `${params.path} is required`));
     return undefined;
   }
   if (value.length > params.maxChars) {
     params.issues.push(
-      issue(
-        "model_copy_invalid",
-        params.path,
-        `${params.path} must be at most ${params.maxChars} characters`,
-      ),
+      issue(code, params.path, `${params.path} must be at most ${params.maxChars} characters`),
     );
     return undefined;
   }
@@ -103,6 +102,50 @@ export function buildLocationRequestEnvelope(
       message,
       button: {
         label: buttonLabel,
+        requestLocation: true,
+      },
+    },
+  };
+}
+
+export function validateLocationRequestEnvelope(
+  envelope: LocationRequestEnvelope,
+): StructuredDeliveryResult<LocationRequestEnvelope> {
+  const issues: StructuredDeliveryValidationIssue[] = [];
+  const message = boundedRequiredString({
+    raw: envelope.message,
+    path: "message",
+    maxChars: MAX_MESSAGE_CHARS,
+    code: "envelope_invalid",
+    issues,
+  });
+  const label = boundedRequiredString({
+    raw: envelope.button?.label,
+    path: "button.label",
+    maxChars: MAX_BUTTON_LABEL_CHARS,
+    code: "envelope_invalid",
+    issues,
+  });
+  if (envelope.button?.requestLocation !== true) {
+    issues.push(
+      issue("envelope_invalid", "button.requestLocation", "button.requestLocation must be true"),
+    );
+  }
+  issues.push(...validateStructuredDeliveryRoute(envelope.route));
+  if (issues.length > 0 || !message || !label) {
+    return {
+      ok: false,
+      code: "envelope_invalid",
+      issues,
+    };
+  }
+  return {
+    ok: true,
+    value: {
+      ...envelope,
+      message,
+      button: {
+        label,
         requestLocation: true,
       },
     },

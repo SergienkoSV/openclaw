@@ -1268,6 +1268,9 @@ export async function handleToolExecutionEnd(
           ...(ctx.params.structuredDeliveryRoute.threadId != null
             ? { threadId: ctx.params.structuredDeliveryRoute.threadId }
             : {}),
+          ...(ctx.params.structuredDeliveryRoute.delivery
+            ? { delivery: ctx.params.structuredDeliveryRoute.delivery }
+            : {}),
         }
       : undefined,
   });

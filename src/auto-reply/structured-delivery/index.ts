@@ -6,5 +6,6 @@ export * from "./extract.js";
 export * from "./hook.js";
 export * from "./location-request.js";
 export * from "./reprompt.js";
+export * from "./route.js";
 export * from "./schema.js";
 export * from "./types.js";
